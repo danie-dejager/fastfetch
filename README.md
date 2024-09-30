@@ -152,13 +152,13 @@ Fastfetch uses `format` to generate output. For example, to make the `GPU` modul
     "modules": [
         {
             "type": "gpu",
-            "format": "{2}" // See `fastfetch -h gpu-format` for detail
+            "format": "{name}" // See `fastfetch -h gpu-format` for detail
         }
     ]
 }
 ```
 
-. . which is equivalent to `fastfetch -s gpu --gpu-format '{2}'`
+. . which is equivalent to `fastfetch -s gpu --gpu-format '{name}'`
 
 See `fastfetch -h format` for information on basic usage. For module specific formattion, see `fastfetch -h <module>-format`
 
@@ -175,6 +175,10 @@ pyfiglet -s -f small_slant $(fastfetch -s os --format json | jq -r '.[0].result.
 
 ![image](https://github.com/fastfetch-cli/fastfetch/assets/6134068/6466524e-ab8c-484f-848d-eec7ddeb7df2)
 
+### Q: My image logo behaves weird. How can I fix it?
+
+See troubleshooting section: <https://github.com/fastfetch-cli/fastfetch/wiki/Logo-options#troubleshooting>
+
 ### Q: Fastfetch runs in white and black on shell startup. Why?
 
 This issue usually happens when using fastfetch with `p10k`. There are known incompatibility between fastfetch and p10k instant prompt.
@@ -185,6 +189,20 @@ You can always use `fastfetch --pipe false` to force fastfetch running in colorf
 ### Q: Why do fastfetch and neofetch show different memory usage result?
 
 See [#1096](https://github.com/fastfetch-cli/fastfetch/issues/1096).
+
+### Q: Fastfetch shows less dpkg packages than neofetch, is it a bug?
+
+Neofetch incorrectly counts `rc` packages ( the package has been removed, but that the configuration files remain ). Bug https://github.com/dylanaraps/neofetch/issues/2278
+
+### Q: I use Debian / Ubuntu / Debian deserved distro. My GPU is detected as `XXXX Device XXXX (VGA compatible)`. Is it a bug?
+
+Try upgrading `pci.ids`: Download <https://pci-ids.ucw.cz/v2.2/pci.ids> and overwrite file `/usr/share/hwdata/pci.ids`. For AMD GPUs, you should also upgrade `amdgpu.ids`: Download <https://gitlab.freedesktop.org/mesa/drm/-/raw/main/data/amdgpu.ids> and overwrite file `/usr/share/libdrm/amdgpu.ids`
+
+Alternatively, you may try to use `fastfetch --gpu-driver-specific`, so that `fastfetch` will try to ask the driver for GPU name if supported.
+
+### Q: Fastfetch cannot detect my awesome 3rd-party macOS window manager!
+
+Try `fastfetch --wm-detect-plugin`. See also [#984](https://github.com/fastfetch-cli/fastfetch/issues/984)
 
 ### Q: I want feature A / B / C. Will fastfetch support it?
 
@@ -209,6 +227,13 @@ Otherwise, open a feature request in [GitHub Issues](https://github.com/fastfetc
 
 * For usage questions, please start a discussion in [GitHub Discussions](https://github.com/fastfetch-cli/fastfetch/discussions).
 * For possible bugs, please open an issue in [GitHub Issues](https://github.com/fastfetch-cli/fastfetch/issues). Be sure to fill the bug-report template carefully for developers to investigate.
+
+## Donate
+
+If you find Fastfetch to be useful, please consider donating.
+
+* Current maintainer: [@CarterLi](https://paypal.me/zhangsongcui)
+* Original author: [@LinusDierheimer](https://github.com/sponsors/LinusDierheimer)
 
 ## Star History
 
