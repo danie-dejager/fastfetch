@@ -78,7 +78,7 @@ static bool pciDetectDriver(FFstrbuf* result, FFstrbuf* pciDir, FFstrbuf* buffer
     return true;
 }
 
-static const char* drmFindRenderFromCard(const char* drmCardKey, FFstrbuf* result)
+FF_MAYBE_UNUSED static const char* drmFindRenderFromCard(const char* drmCardKey, FFstrbuf* result)
 {
     char path[PATH_MAX];
     sprintf(path, "/sys/class/drm/%s/device/drm", drmCardKey);
@@ -395,6 +395,7 @@ static const char* drmDetectIntelSpecific(FFGPUResult* gpu, const char* drmKey, 
     }
     return NULL;
     #else
+    FF_UNUSED(gpu, drmKey, buffer);
     return "Fastfetch is not compiled with drm support";
     #endif
 }
@@ -625,7 +626,7 @@ FF_MAYBE_UNUSED static const char* drmDetectAsahiSpecific(FFGPUResult* gpu, cons
 static const char* detectOf(FFlist* gpus, FFstrbuf* buffer, FFstrbuf* drmDir, const char* drmKey)
 {
     char compatible[256]; // vendor,model-name
-    if (sscanf(buffer->chars + strlen("of:"), "NgpuT%*[^C]C%256[^C]", compatible) != 1)
+    if (sscanf(buffer->chars + strlen("of:"), "NgpuT%*[^C]C%255[^C]", compatible) != 1)
         return "Failed to parse of modalias or not a GPU device";
 
     char* name = strchr(compatible, ',');
