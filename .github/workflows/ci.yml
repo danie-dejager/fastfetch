@@ -381,7 +381,7 @@ jobs:
           run: |
             uname -a
             sudo pkg update
-            sudo pkg install -y cmake git pkgconf binutils wayland vulkan-headers vulkan-loader libxcb libXrandr libX11 libdrm libelf glib dconf dbus sqlite3-tcl xfce4-conf egl libosmesa opencl ocl-icd v4l_compat py311-requests
+            sudo pkg install -y cmake git pkgconf binutils wayland vulkan-headers vulkan-loader libxcb libXrandr libX11 libdrm glib dconf dbus sqlite3-tcl xfce4-conf egl libosmesa opencl ocl-icd v4l_compat py311-requests
             cmake -DSET_TWEAK=Off -DBUILD_TESTS=On -DENABLE_EMBEDDED_PCIIDS=On .
             cmake --build . --target package --verbose -j4
             ./fastfetch --list-features
@@ -417,7 +417,7 @@ jobs:
           version: '7.5'
           run: |
             uname -a
-            sudo pkg_add -r cmake git pkgconf wayland vulkan-headers vulkan-loader glib2 dconf dbus sqlite3 xfconf imagemagick chafa pulseaudio
+            sudo pkg_add -r cmake git pkgconf wayland vulkan-headers vulkan-loader glib2 dconf dbus sqlite3 xfconf imagemagick chafa pulseaudio libv4l
             cmake -DSET_TWEAK=Off -DBUILD_TESTS=On .
             cmake --build . --target package --verbose -j4
             ./fastfetch --list-features
@@ -431,6 +431,42 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: fastfetch-openbsd-amd64
+          path: ./fastfetch-*.*
+
+  netbsd-amd64:
+    name: NetBSD-amd64
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4
+
+      - name: run VM
+        uses: cross-platform-actions/action@master
+        with:
+          operating_system: netbsd
+          architecture: x86-64
+          cpu_count: 4
+          shell: bash
+          version: '10.0'
+          run: |
+            uname -a
+            sudo pkgin -y install cmake git pkgconf wayland vulkan-headers dconf dbus sqlite3 ImageMagick pulseaudio opencl-headers ocl-icd libv4l py312-requests
+            cmake -DSET_TWEAK=Off -DBUILD_TESTS=On .
+            cmake --build . --target package --verbose -j4
+            ./fastfetch --list-features
+            time ./fastfetch -c presets/ci.jsonc --stat false
+            time ./fastfetch -c presets/ci.jsonc --format json
+            time ./flashfetch
+            ldd fastfetch
+            ctest
+
+      - name: upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: fastfetch-netbsd-amd64
           path: ./fastfetch-*.*
 
   windows-amd64:
