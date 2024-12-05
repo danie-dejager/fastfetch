@@ -1,5 +1,5 @@
 Name:           fastfetch
-Version:        2.30.1
+Version:        2.31.0
 Release:        1%{?dist}
 Summary:        Like neofetch, but much faster because written in c
  
@@ -105,6 +105,7 @@ upx %{buildroot}/%{_bindir}/%{name}
 %{_datadir}/zsh/site-functions/_%{name}
 
 %changelog
+* Thu Dec 5 2024 - Danie de Jager <danie.dejager@gmail.com> - 2.31.0-1
 * Mon Nov 18 2024 - Danie de Jager <danie.dejager@gmail.com> - 2.30.1-1
 - A hotfix release that fixes a build failure when running cmake outside of build directory.
 * Mon Nov 18 2024 - Danie de Jager <danie.dejager@gmail.com> - 2.30.0-1
