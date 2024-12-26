@@ -73,7 +73,7 @@ BuildArch: noarch
 
  
 %build
-%cmake -D BUILD_TESTS=ON
+%cmake -D BUILD_TESTS=ON -D BUILD_FLASHFETCH=OFF
 %cmake_build
 
 
@@ -83,7 +83,6 @@ BuildArch: noarch
 
 %install
 %cmake_install
-\rm %{buildroot}/%{_bindir}/flashfetch
 # Compress the binary using upx after installation
 upx %{buildroot}/%{_bindir}/%{name}
 
