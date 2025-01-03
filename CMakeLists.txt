@@ -534,7 +534,7 @@ if(LINUX)
         src/detection/users/users_linux.c
         src/detection/wallpaper/wallpaper_linux.c
         src/detection/wifi/wifi_linux.c
-        src/detection/wm/wm_nosupport.c
+        src/detection/wm/wm_linux.c
         src/detection/de/de_linux.c
         src/detection/wmtheme/wmtheme_linux.c
         src/detection/camera/camera_linux.c
@@ -617,7 +617,6 @@ elseif(FreeBSD)
         src/common/sysctl.c
         src/detection/battery/battery_bsd.c
         src/detection/bios/bios_bsd.c
-        src/detection/bluetooth/bluetooth_nosupport.c
         src/detection/bluetoothradio/bluetoothradio_nosupport.c
         src/detection/board/board_bsd.c
         src/detection/bootmgr/bootmgr_bsd.c
@@ -690,6 +689,15 @@ elseif(FreeBSD)
         src/util/platform/FFPlatform_unix.c
         src/util/binary_linux.c
     )
+    if(DragonFly)
+        list(APPEND LIBFASTFETCH_SRC
+            src/detection/bluetooth/bluetooth_nosupport.c
+        )
+    else()
+        list(APPEND LIBFASTFETCH_SRC
+            src/detection/bluetooth/bluetooth_bsd.c
+        )
+    endif()
 elseif(NetBSD)
     list(APPEND LIBFASTFETCH_SRC
         src/common/dbus.c
@@ -914,7 +922,7 @@ elseif(APPLE)
         src/detection/users/users_linux.c
         src/detection/wallpaper/wallpaper_apple.m
         src/detection/wifi/wifi_apple.m
-        src/detection/wm/wm_apple.c
+        src/detection/wm/wm_apple.m
         src/detection/de/de_nosupport.c
         src/detection/wmtheme/wmtheme_apple.m
         src/detection/camera/camera_apple.m
@@ -995,6 +1003,7 @@ elseif(WIN32)
         src/util/windows/registry.c
         src/util/windows/unicode.c
         src/util/windows/wmi.cpp
+        src/util/windows/version.c
         src/util/platform/FFPlatform_windows.c
         src/util/binary_windows.c
     )
@@ -1468,6 +1477,7 @@ elseif(FreeBSD)
     target_link_libraries(libfastfetch
         PRIVATE "m"
         PRIVATE "usbhid"
+        PRIVATE "bluetooth"
     )
     if(NOT DragonFly)
         target_link_libraries(libfastfetch
