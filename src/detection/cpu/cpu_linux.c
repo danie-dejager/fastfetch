@@ -97,7 +97,11 @@ static void detectQualcomm(FFCPUResult* cpu)
 {
     // https://en.wikipedia.org/wiki/List_of_Qualcomm_Snapdragon_systems_on_chips
 
-    if (ffStrbufEqualS(&cpu->name, "SM8750"))
+    if (ffStrbufEqualS(&cpu->name, "SM8750-AC"))
+        ffStrbufSetStatic(&cpu->name, "Qualcomm Snapdragon 8 Elite for Galaxy [SM8750-AC]");
+    else if (ffStrbufEqualS(&cpu->name, "SM8750-3"))
+        ffStrbufSetStatic(&cpu->name, "Qualcomm Snapdragon 8 Elite [SM8750-3]");
+    else if (ffStrbufEqualS(&cpu->name, "SM8750"))
         ffStrbufSetStatic(&cpu->name, "Qualcomm Snapdragon 8 Elite [SM8750]");
     else if (ffStrbufEqualS(&cpu->name, "SM8635"))
         ffStrbufSetStatic(&cpu->name, "Qualcomm Snapdragon 8s Gen 3 [SM8635]");
@@ -557,7 +561,7 @@ const char* ffDetectCPUImpl(const FFCPUOptions* options, FFCPUResult* cpu)
     #if __x86_64__ || __i386__
     cpu->packages = getPackageCount(&cpuinfo);
     if (cpu->packages > 1)
-        cpu->coresPhysical *= cpu->packages;
+        cpu->coresPhysical *= cpu->packages; // https://github.com/hykilpikonna/hyfetch/issues/374#issuecomment-2571578914
     #endif
 
     // Ref https://github.com/fastfetch-cli/fastfetch/issues/1194#issuecomment-2295058252
