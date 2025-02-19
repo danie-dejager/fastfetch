@@ -1,5 +1,5 @@
 Name:           fastfetch
-Version:        2.36.1
+Version:        2.37.0
 Release:        1%{?dist}
 Summary:        Like neofetch, but much faster because written in c
  
@@ -104,6 +104,7 @@ upx %{buildroot}/%{_bindir}/%{name}
 %{_datadir}/zsh/site-functions/_%{name}
 
 %changelog
+* Wed Feb 19 2025 - Danie de Jager <danie.dejager@gmail.com> - 2.37.0-1
 * Tue Feb 11 2025 - Danie de Jager <danie.dejager@gmail.com> - 2.36.1-1
 * Mon Feb 10 2025 - Danie de Jager <danie.dejager@gmail.com> - 2.36.0-1
 * Sun Jan 26 2025 - Danie de Jager <danie.dejager@gmail.com> - 2.35.0-1
