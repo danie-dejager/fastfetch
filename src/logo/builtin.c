@@ -634,13 +634,24 @@ static const FFlogo A[] = {
 static const FFlogo B[] = {
     // Bedrock
     {
-        .names = {"bedrock", "bedrocklinux", "bedrock-linux"},
+        .names = {"bedrock"},
         .lines = FASTFETCH_DATATEXT_LOGO_BEDROCK,
         .colors = {
             FF_COLOR_FG_LIGHT_BLACK, //grey
             FF_COLOR_FG_WHITE,
         },
         .colorKeys = FF_COLOR_FG_LIGHT_BLACK, //grey
+        .colorTitle = FF_COLOR_FG_WHITE,
+    },
+    // BedrockSmall
+    {
+        .names = {"bedrock_small"},
+        .lines = FASTFETCH_DATATEXT_LOGO_BEDROCK_SMALL,
+        .type = FF_LOGO_LINE_TYPE_SMALL_BIT,
+        .colors = {
+            FF_COLOR_FG_WHITE,
+        },
+        .colorKeys = FF_COLOR_FG_WHITE,
         .colorTitle = FF_COLOR_FG_WHITE,
     },
     // BigLinux
@@ -3660,9 +3671,9 @@ static const FFlogo P[] = {
             FF_COLOR_FG_YELLOW,
         },
     },
-    // Pisi
+    // PisiLinux
     {
-        .names = {"Pisi"},
+        .names = {"PisiLinux"},
         .lines = FASTFETCH_DATATEXT_LOGO_PISI,
         .colors = {
             FF_COLOR_FG_BLUE,
