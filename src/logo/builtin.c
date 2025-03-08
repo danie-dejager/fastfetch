@@ -1093,6 +1093,16 @@ static const FFlogo C[] = {
         .colorKeys = FF_COLOR_FG_BLUE,
         .colorTitle = FF_COLOR_FG_WHITE,
     },
+    // Common Torizon
+    {
+        .names = {"common-torizon"},
+        .lines = FASTFETCH_DATATEXT_LOGO_TORIZONCORE,
+        .colors = {
+            FF_COLOR_FG_LIGHT_WHITE,
+            FF_COLOR_FG_YELLOW,
+            FF_COLOR_FG_BLUE
+        },
+    },
     // Cosmic DE
     {
         .names = {"Cosmic"},
@@ -1581,6 +1591,22 @@ static const FFlogo E[] = {
 };
 
 static const FFlogo F[] = {
+    // Fastfetch
+    {
+        .names = {"Fastfetch", "FF"},
+        .lines = FASTFETCH_DATATEXT_LOGO_FASTFETCH,
+        .colors = {
+            FF_COLOR_FG_BLUE,
+            FF_COLOR_FG_RED,
+            FF_COLOR_FG_YELLOW,
+            FF_COLOR_FG_GREEN,
+            FF_COLOR_FG_DEFAULT,
+            FF_COLOR_FG_MAGENTA,
+            FF_COLOR_FG_CYAN,
+        },
+        .colorKeys = FF_COLOR_FG_BLUE,
+        .colorTitle = FF_COLOR_FG_YELLOW,
+    },
     // Fedora
     {
         .names = {"Fedora"},
@@ -4213,6 +4239,15 @@ static const FFlogo S[] = {
         .lines = FASTFETCH_DATATEXT_LOGO_SHASTRAOS,
         .colors = {
             FF_COLOR_FG_CYAN,
+            FF_COLOR_FG_WHITE,
+        },
+    },
+    // Shebang
+    {
+        .names = {"Shebang"},
+        .lines = FASTFETCH_DATATEXT_LOGO_SHEBANG,
+        .colors = {
+            FF_COLOR_FG_WHITE,
             FF_COLOR_FG_WHITE,
         },
     },
