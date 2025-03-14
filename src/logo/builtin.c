@@ -766,6 +766,16 @@ static const FFlogo B[] = {
         .colorKeys = FF_COLOR_FG_CYAN,
         .colorTitle = FF_COLOR_FG_GREEN,
     },
+    // BredOS
+    {
+        .names = {"Bredos"},
+        .lines = FASTFETCH_DATATEXT_LOGO_BREDOS,
+        .colors = {
+            FF_COLOR_FG_RGB "198;151;66", //grey
+        },
+        .colorKeys = FF_COLOR_FG_RGB "198;151;66",
+        .colorTitle = FF_COLOR_FG_RGB "198;151;66",
+    },
     // BSD
     {
         .names = {"BSD"},
@@ -1757,14 +1767,6 @@ static const FFlogo F[] = {
         },
         .colorKeys = FF_COLOR_FG_RED,
         .colorTitle = FF_COLOR_FG_WHITE,
-    },
-    // FoxOS
-    {
-        .names = {"FoxOS"},
-        .lines = FASTFETCH_DATATEXT_LOGO_FOXOS,
-        .colors = {
-            FF_COLOR_FG_YELLOW,
-        },
     },
     // FreeBSD
     {
@@ -5070,6 +5072,15 @@ static const FFlogo W[] = {
         },
         .colorKeys = FF_COLOR_FG_CYAN,
         .colorTitle = FF_COLOR_FG_BLUE,
+    },
+    // WolfOS
+    {
+        .names = {"WolfOS"},
+        .lines = FASTFETCH_DATATEXT_LOGO_WOLFOS,
+        .colors = {
+            FF_COLOR_FG_BLUE,
+            FF_COLOR_FG_GREEN,
+        },
     },
     // LAST
     {},
