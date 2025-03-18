@@ -49,22 +49,27 @@ const char* ffNetworkingSendHttpRequest(FFNetworkingState* state, const char* ho
 {
     FF_DEBUG("Preparing to send HTTP request: host=%s, path=%s", host, path);
 
-    // Initialize with compression disabled by default
-    state->compression = false;
-
-    #ifdef FF_HAVE_ZLIB
-    const char* zlibError = ffNetworkingLoadZlibLibrary();
-    // Only enable compression if zlib library is successfully loaded
-    if (zlibError == NULL)
+    if (state->compression)
     {
-        state->compression = true;
-        FF_DEBUG("Successfully loaded zlib library, compression enabled");
-    } else {
-        FF_DEBUG("Failed to load zlib library, compression disabled: %s", zlibError);
+        #ifdef FF_HAVE_ZLIB
+        const char* zlibError = ffNetworkingLoadZlibLibrary();
+        // Only enable compression if zlib library is successfully loaded
+        if (zlibError == NULL)
+        {
+            FF_DEBUG("Successfully loaded zlib library, compression enabled");
+        } else {
+            FF_DEBUG("Failed to load zlib library, compression disabled: %s", zlibError);
+            state->compression = false;
+        }
+        #else
+        FF_DEBUG("zlib not supported at build time, compression disabled");
+        state->compression = false;
+        #endif
     }
-    #else
-    FF_DEBUG("zlib not supported at build time, compression disabled");
-    #endif
+    else
+    {
+        FF_DEBUG("Compression disabled");
+    }
 
     static WSADATA wsaData;
     if (wsaData.wVersion == 0)
@@ -115,15 +120,6 @@ const char* ffNetworkingSendHttpRequest(FFNetworkingState* state, const char* ho
     }
     #endif
 
-    #ifdef TCP_FASTOPEN
-    // Set TCP Fast Open
-    if (setsockopt(state->sockfd, IPPROTO_TCP, TCP_FASTOPEN, (char*)&flag, sizeof(flag)) != 0) {
-        FF_DEBUG("Failed to set TCP_FASTOPEN option: %s", ffDebugWin32Error((DWORD) WSAGetLastError()));
-    } else {
-        FF_DEBUG("Successfully set TCP_FASTOPEN option");
-    }
-    #endif
-
     // Set timeout if needed
     if (state->timeout > 0) {
         FF_DEBUG("Setting connection timeout: %u ms", state->timeout);
@@ -169,18 +165,48 @@ const char* ffNetworkingSendHttpRequest(FFNetworkingState* state, const char* ho
     ffStrbufAppendS(&command, headers);
     ffStrbufAppendS(&command, "\r\n");
 
+    #ifdef TCP_FASTOPEN
+    if (state->tfo)
+    {
+        // Set TCP Fast Open
+        flag = 1;
+        if (setsockopt(state->sockfd, IPPROTO_TCP, TCP_FASTOPEN, (char*)&flag, sizeof(flag)) != 0) {
+            FF_DEBUG("Failed to set TCP_FASTOPEN option: %s", ffDebugWin32Error((DWORD) WSAGetLastError()));
+        } else {
+            FF_DEBUG("Successfully set TCP_FASTOPEN option");
+        }
+    }
+    else
+    {
+        FF_DEBUG("TCP Fast Open disabled");
+    }
+    #endif
+
     FF_DEBUG("Using ConnectEx to send %u bytes of data", command.length);
+    DWORD sent = 0;
     BOOL result = ConnectEx(state->sockfd, addr->ai_addr, (int)addr->ai_addrlen,
-                          command.chars, command.length, NULL, &state->overlapped);
+                          command.chars, command.length, &sent, &state->overlapped);
 
     freeaddrinfo(addr);
+    addr = NULL;
 
-    if(!result && WSAGetLastError() != WSA_IO_PENDING)
+    if(!result)
     {
-        FF_DEBUG("ConnectEx() failed: %s", ffDebugWin32Error((DWORD) WSAGetLastError()));
-        closesocket(state->sockfd);
-        state->sockfd = INVALID_SOCKET;
-        return "ConnectEx() failed";
+        if (WSAGetLastError() != WSA_IO_PENDING)
+        {
+            FF_DEBUG("ConnectEx() failed: %s", ffDebugWin32Error((DWORD) WSAGetLastError()));
+            closesocket(state->sockfd);
+            state->sockfd = INVALID_SOCKET;
+            return "ConnectEx() failed";
+        }
+        else
+        {
+            FF_DEBUG("ConnectEx() pending");
+        }
+    }
+    else
+    {
+        FF_DEBUG("ConnectEx() succeeded, sent %u bytes of data", (unsigned) sent);
     }
 
     // No need to cleanup state fields here since we need them in the receive function
