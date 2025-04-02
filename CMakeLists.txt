@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.12.0) # target_link_libraries with OBJECT libs & project homepage url
 
 project(fastfetch
-    VERSION 2.39.1
+    VERSION 2.40.0
     LANGUAGES C
     DESCRIPTION "Fast neofetch-like system information tool"
     HOMEPAGE_URL "https://github.com/fastfetch-cli/fastfetch"
@@ -913,7 +913,7 @@ elseif(APPLE)
         src/detection/cpuusage/cpuusage_apple.c
         src/detection/cursor/cursor_apple.m
         src/detection/disk/disk_bsd.c
-        src/detection/dns/dns_linux.c
+        src/detection/dns/dns_apple.c
         src/detection/physicaldisk/physicaldisk_apple.c
         src/detection/physicalmemory/physicalmemory_apple.m
         src/detection/diskio/diskio_apple.c
@@ -947,7 +947,7 @@ elseif(APPLE)
         src/detection/terminalshell/terminalshell_linux.c
         src/detection/terminalsize/terminalsize_linux.c
         src/detection/theme/theme_nosupport.c
-        src/detection/tpm/tpm_nosupport.c
+        src/detection/tpm/tpm_apple.c
         src/detection/uptime/uptime_bsd.c
         src/detection/users/users_linux.c
         src/detection/wallpaper/wallpaper_apple.m
