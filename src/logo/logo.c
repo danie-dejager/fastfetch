@@ -473,6 +473,9 @@ static void updateLogoPath(void)
     if(ffPathExists(options->source.chars, FF_PATHTYPE_FILE))
         return;
 
+    if (ffStrbufEqualS(&options->source, "-")) // stdin
+        return;
+
     FF_STRBUF_AUTO_DESTROY fullPath = ffStrbufCreate();
     if (ffPathExpandEnv(options->source.chars, &fullPath) && ffPathExists(fullPath.chars, FF_PATHTYPE_FILE))
     {
@@ -623,7 +626,8 @@ void ffLogoPrint(void)
         ffStrbufIgnCaseEqualS(&terminal->processName, "konsole") ||
         ffStrbufIgnCaseEqualS(&terminal->processName, "wezterm") ||
         ffStrbufIgnCaseEqualS(&terminal->processName, "wayst") ||
-        ffStrbufIgnCaseEqualS(&terminal->processName, "ghostty");
+        ffStrbufIgnCaseEqualS(&terminal->processName, "ghostty") ||
+        ffStrbufIgnCaseEqualS(&terminal->processName, "warp");
 
     //Try to load the logo as an image. If it succeeds, print it and return.
     if(logoPrintImageIfExists(supportsKitty ? FF_LOGO_TYPE_IMAGE_KITTY : FF_LOGO_TYPE_IMAGE_CHAFA, false))
