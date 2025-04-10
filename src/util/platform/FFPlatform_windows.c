@@ -9,6 +9,9 @@
 #include <Windows.h>
 #include <shlobj.h>
 
+#define SECURITY_WIN32 1 // For secext.h
+#include <secext.h>
+
 static void getExePath(FFPlatform* platform)
 {
     wchar_t exePathW[MAX_PATH];
@@ -129,14 +132,6 @@ static void getDataDirs(FFPlatform* platform)
     platformPathAddKnownFolder(&platform->dataDirs, &FOLDERID_RoamingAppData);
     platformPathAddKnownFolder(&platform->dataDirs, &FOLDERID_LocalAppData);
     ffPlatformPathAddHome(&platform->dataDirs, platform, "");
-
-    if (platform->exePath.length > 0)
-    {
-        // Add ${currentExePath}
-        FF_STRBUF_AUTO_DESTROY path = ffStrbufCreateCopy(&platform->exePath);
-        ffStrbufSubstrBeforeLastC(&path, '/');
-        ffPlatformPathAddAbsolute(&platform->dataDirs, path.chars);
-    }
 }
 
 static void getUserName(FFPlatform* platform)
@@ -146,11 +141,16 @@ static void getUserName(FFPlatform* platform)
         ffStrbufSetS(&platform->userName, userName);
     else
     {
-        wchar_t buffer[128];
+        wchar_t buffer[256];
         DWORD len = ARRAY_SIZE(buffer);
         if(GetUserNameW(buffer, &len))
             ffStrbufSetWS(&platform->userName, buffer);
     }
+
+    wchar_t buffer[256];
+    DWORD len = ARRAY_SIZE(buffer);
+    if (GetUserNameExW(NameDisplay, buffer, &len))
+        ffStrbufSetWS(&platform->fullUserName, buffer);
 }
 
 static void getHostName(FFPlatform* platform)

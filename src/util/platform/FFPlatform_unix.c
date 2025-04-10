@@ -172,14 +172,6 @@ static void getDataDirs(FFPlatform* platform)
 #endif
     ffPlatformPathAddAbsolute(&platform->dataDirs, FASTFETCH_TARGET_DIR_USR "/local/share/");
     ffPlatformPathAddAbsolute(&platform->dataDirs, FASTFETCH_TARGET_DIR_USR "/share/");
-
-    if (platform->exePath.length > 0)
-    {
-        // Add ${currentExePath}
-        FF_STRBUF_AUTO_DESTROY path = ffStrbufCreateCopy(&platform->exePath);
-        ffStrbufSubstrBeforeLastC(&path, '/');
-        ffPlatformPathAddAbsolute(&platform->dataDirs, path.chars);
-    }
 }
 
 static void getUserName(FFPlatform* platform, const struct passwd* pwd)
@@ -189,6 +181,8 @@ static void getUserName(FFPlatform* platform, const struct passwd* pwd)
         user = pwd->pw_name;
 
     ffStrbufAppendS(&platform->userName, user);
+
+    if (pwd) ffStrbufAppendS(&platform->fullUserName, pwd->pw_gecos);
 }
 
 static void getHostName(FFPlatform* platform, const struct utsname* uts)
