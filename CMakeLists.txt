@@ -734,7 +734,7 @@ elseif(NetBSD)
         src/common/sysctl.c
         src/detection/battery/battery_nbsd.c
         src/detection/bios/bios_nbsd.c
-        src/detection/bluetooth/bluetooth_nosupport.c
+        src/detection/bluetooth/bluetooth_bsd.c
         src/detection/bluetoothradio/bluetoothradio_nosupport.c
         src/detection/board/board_nbsd.c
         src/detection/bootmgr/bootmgr_bsd.c
@@ -1591,6 +1591,12 @@ elseif(WIN32)
         PRIVATE "secur32"
         PRIVATE "pdh"
     )
+    if(CMAKE_SYSTEM_PROCESSOR STREQUAL "ARM64")
+        # WoA only works on Windows 10 or higher
+        target_link_libraries(libfastfetch
+            PRIVATE "mincore"
+        )
+    endif()
 elseif(FreeBSD)
     target_link_libraries(libfastfetch
         PRIVATE "m"
@@ -1614,6 +1620,7 @@ elseif(OpenBSD)
     )
 elseif(NetBSD)
     target_link_libraries(libfastfetch
+        PRIVATE "bluetooth"
         PRIVATE "m"
         PRIVATE "prop"
     )
