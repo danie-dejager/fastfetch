@@ -802,7 +802,7 @@ elseif(NetBSD)
         src/detection/users/users_linux.c
         src/detection/wallpaper/wallpaper_linux.c
         src/detection/wifi/wifi_nbsd.c
-        src/detection/wm/wm_nosupport.c
+        src/detection/wm/wm_linux.c
         src/detection/de/de_linux.c
         src/detection/wmtheme/wmtheme_linux.c
         src/detection/camera/camera_linux.c
@@ -884,7 +884,7 @@ elseif(OpenBSD)
         src/detection/users/users_obsd.c
         src/detection/wallpaper/wallpaper_linux.c
         src/detection/wifi/wifi_obsd.c
-        src/detection/wm/wm_nosupport.c
+        src/detection/wm/wm_linux.c
         src/detection/de/de_linux.c
         src/detection/wmtheme/wmtheme_linux.c
         src/detection/camera/camera_linux.c
@@ -1961,12 +1961,17 @@ if(LINUX)
         endif()
     endif()
 
-    find_program(HAVE_RPMBUILD "rpmbuild")
-    if(HAVE_RPMBUILD)
-        set(CPACK_GENERATOR "${CPACK_GENERATOR};RPM")
+    if(NOT IS_MUSL)
+        find_program(HAVE_RPMBUILD "rpmbuild")
+        if(HAVE_RPMBUILD)
+            set(CPACK_GENERATOR "${CPACK_GENERATOR};RPM")
 
-        set(CPACK_RPM_PACKAGE_LICENSE "MIT")
+            set(CPACK_RPM_PACKAGE_LICENSE "MIT")
+        endif()
     endif()
+elseif(FreeBSD)
+    set(CPACK_FREEBSD_PACKAGE_LICENSE "MIT")
+    set(CPACK_GENERATOR "${CPACK_GENERATOR};FREEBSD")
 endif()
 
 set(CPACK_SET_DESTDIR ON)
