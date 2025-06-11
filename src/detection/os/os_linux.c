@@ -231,6 +231,24 @@ FF_MAYBE_UNUSED static bool detectDebianDerived(FFOSResult* result)
         ffStrbufSetF(&result->prettyName, "Proxmox VE %s", result->versionID.chars);
         return true;
     }
+    else if (ffStrbufContainS(&instance.state.platform.sysinfo.release, "+rpt-rpi-"))
+    {
+        // Raspberry Pi OS
+        ffStrbufSetS(&result->id, "raspbian");
+        ffStrbufSetS(&result->idLike, "debian");
+        ffStrbufSetS(&result->name, "Raspberry Pi OS");
+        ffStrbufSetS(&result->prettyName, "Raspberry Pi OS");
+        return true;
+    }
+    else if (ffStrbufEndsWithS(&instance.state.platform.sysinfo.release, "+truenas"))
+    {
+        // TrueNAS Scale
+        ffStrbufSetS(&result->id, "truenas-scale");
+        ffStrbufSetS(&result->idLike, "debian");
+        ffStrbufSetS(&result->name, "TrueNAS Scale");
+        ffStrbufSetS(&result->prettyName, "TrueNAS Scale");
+        return true;
+    }
     else
     {
         // Hack for MX Linux. See #847

@@ -4739,6 +4739,18 @@ static const FFlogo T[] = {
             FF_COLOR_FG_CYAN,
         },
     },
+    // TrueNAS Scale
+    {
+        .names = {"TrueNAS-Scale"},
+        .lines = FASTFETCH_DATATEXT_LOGO_TRUENAS_SCALE,
+        .colors = {
+            FF_COLOR_FG_256 "39",
+            FF_COLOR_FG_256 "32",
+            FF_COLOR_FG_256 "248",
+        },
+        .colorKeys = FF_COLOR_FG_256 "248",
+        .colorTitle = FF_COLOR_FG_256 "32",
+    },
     // TuxedoOS
     {
         .names = {"Tuxedo OS", "tuxedo"},
@@ -5267,15 +5279,6 @@ static const FFlogo W[] = {
 };
 
 static const FFlogo X[] = {
-    // Xenia
-    {
-        .names = {"Xenia"},
-        .lines = FASTFETCH_DATATEXT_LOGO_XENIA,
-        .colors = {
-            FF_COLOR_FG_RED,
-            FF_COLOR_FG_WHITE,
-        }
-    },
     // XCP-ng
     {
         .names = {"XCP-ng", "xenenterprise"},
@@ -5289,14 +5292,27 @@ static const FFlogo X[] = {
             FF_COLOR_FG_YELLOW,
         }
     },
-    // Xferience
+    // Xenia
     {
-        .names = {"Xferience"},
-        .lines = FASTFETCH_DATATEXT_LOGO_XFERIENCE,
+        .names = {"Xenia"},
+        .lines = FASTFETCH_DATATEXT_LOGO_XENIA,
         .colors = {
-            FF_COLOR_FG_CYAN,
-            FF_COLOR_FG_CYAN,
+            FF_COLOR_FG_RED,
+            FF_COLOR_FG_LIGHT_BLACK,
         },
+        .colorKeys = FF_COLOR_FG_DEFAULT,
+        .colorTitle = FF_COLOR_FG_RED,
+    },
+    // Xenia_old
+    {
+        .names = {"Xenia_old"},
+        .lines = FASTFETCH_DATATEXT_LOGO_XENIA_OLD,
+        .type = FF_LOGO_LINE_TYPE_ALTER_BIT,
+        .colors = {
+            FF_COLOR_FG_YELLOW,
+            FF_COLOR_FG_GREEN,
+            FF_COLOR_FG_RED,
+        }
     },
     //XeroArch
     {
@@ -5310,6 +5326,15 @@ static const FFlogo X[] = {
             FF_COLOR_FG_256 "16",
             FF_COLOR_FG_256 "15",
         }
+    },
+    // Xferience
+    {
+        .names = {"Xferience"},
+        .lines = FASTFETCH_DATATEXT_LOGO_XFERIENCE,
+        .colors = {
+            FF_COLOR_FG_CYAN,
+            FF_COLOR_FG_CYAN,
+        },
     },
     // LAST
     {},
