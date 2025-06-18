@@ -252,6 +252,20 @@ static const FFlogo A[] = {
         .colorKeys = FF_COLOR_FG_RED,
         .colorTitle = FF_COLOR_FG_WHITE,
     },
+   // AnushOS
+    {
+        .names = {"AnushOS"},
+        .lines = FASTFETCH_DATATEXT_LOGO_ANUSHOS,
+        .colors = {
+            FF_COLOR_FG_WHITE,
+            FF_COLOR_FG_BLACK,
+            FF_COLOR_FG_YELLOW,
+            FF_COLOR_FG_CYAN,
+            FF_COLOR_FG_RED,
+        },
+        .colorKeys = FF_COLOR_FG_WHITE,
+        .colorTitle = FF_COLOR_FG_WHITE,
+    },
     // AoscOsRetro
     {
         .names = {"Aosc OS/Retro", "aoscosretro"},
@@ -2000,6 +2014,16 @@ static const FFlogo G[] = {
         .colorKeys = FF_COLOR_FG_BLUE,
         .colorTitle = FF_COLOR_FG_RED,
     },
+    // GhostFreak
+    {
+        .names = {"GhostFreak"},
+        .lines = FASTFETCH_DATATEXT_LOGO_GHOSTFREAK,
+        .colors = {
+            FF_COLOR_FG_DEFAULT,
+        },
+        .colorKeys = FF_COLOR_FG_DEFAULT,
+        .colorTitle = FF_COLOR_FG_BLUE,
+    },
     // Glaucus
     {
         .names = {"Glaucus"},
@@ -2185,6 +2209,17 @@ static const FFlogo H[] = {
         },
         .colorKeys = FF_COLOR_FG_RED,
         .colorTitle = FF_COLOR_FG_RED,
+    },
+    // HarmonyOS
+    {
+        .names = {"HarmonyOS"},
+        .lines = FASTFETCH_DATATEXT_LOGO_HARMONYOS,
+        .colors = {
+            FF_COLOR_FG_WHITE,
+            FF_COLOR_FG_BLUE,
+        },
+        .colorKeys = FF_COLOR_FG_BLUE,
+        .colorTitle = FF_COLOR_FG_BLUE,
     },
     // Hash
     {
