@@ -2313,13 +2313,13 @@ static const FFlogo H[] = {
         .colorKeys = FF_COLOR_FG_LIGHT_BLACK,
         .colorTitle = FF_COLOR_FG_WHITE,
     },
-    // Hydra Framework
+    // HydraPWK
     {
-        .names = {"Hydra"},
-        .lines = FASTFETCH_DATATEXT_LOGO_HYDRA,
+        .names = {"HydraPWK"},
+        .lines = FASTFETCH_DATATEXT_LOGO_HYDRAPWK,
         .colors = {
-                FF_COLOR_FG_RED,
-                FF_COLOR_FG_WHITE,
+            FF_COLOR_FG_RED,
+            FF_COLOR_FG_DEFAULT,
         },
     },
     // LAST
@@ -2424,18 +2424,18 @@ static const FFlogo K[] = {
     },
     // Kali
     {
-        .names = {"Kali", "Kalilinux"},
+        .names = {"Kali"},
         .lines = FASTFETCH_DATATEXT_LOGO_KALI,
         .colors = {
             FF_COLOR_FG_BLUE,
             FF_COLOR_FG_LIGHT_BLACK,
         },
         .colorKeys = FF_COLOR_FG_BLUE,
-        .colorTitle = FF_COLOR_FG_WHITE,
+        .colorTitle = FF_COLOR_FG_DEFAULT,
     },
     // KaliSmall
     {
-        .names = {"Kali_small", "Kalilinux_small"},
+        .names = {"Kali_small"},
         .type = FF_LOGO_LINE_TYPE_SMALL_BIT,
         .lines = FASTFETCH_DATATEXT_LOGO_KALI_SMALL,
         .colors = {
@@ -2443,7 +2443,17 @@ static const FFlogo K[] = {
             FF_COLOR_FG_LIGHT_BLACK,
         },
         .colorKeys = FF_COLOR_FG_BLUE,
-        .colorTitle = FF_COLOR_FG_WHITE,
+        .colorTitle = FF_COLOR_FG_DEFAULT,
+    },
+    // Kalpa Desktop
+    {
+        .names = {"kalpa-desktop"},
+        .lines = FASTFETCH_DATATEXT_LOGO_KALPA_DESKTOP,
+        .colors = {
+            FF_COLOR_FG_GREEN,
+        },
+        .colorKeys = FF_COLOR_FG_GREEN,
+        .colorTitle = FF_COLOR_FG_DEFAULT,
     },
     // KaOS
     {
@@ -3445,7 +3455,7 @@ static const FFlogo O[] = {
         .lines = FASTFETCH_DATATEXT_LOGO_OPENINDIANA,
         .colors = {
             FF_COLOR_FG_BLUE,
-            FF_COLOR_FG_WHITE,
+            FF_COLOR_FG_DEFAULT,
         },
     },
     // OpenMamba
