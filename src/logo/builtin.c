@@ -701,6 +701,15 @@ static const FFlogo A[] = {
             FF_COLOR_FG_WHITE,
         },
     },
+    // AxOS
+    {
+        .names = {"AxOS"},
+        .lines = FASTFETCH_DATATEXT_LOGO_AXOS,
+        .colors = {
+            FF_COLOR_FG_RGB "222;6;255",
+            FF_COLOR_FG_RGB "222;6;255",
+        },
+    },
     // Azos
     {
         .names = {"Azos"},
@@ -3103,6 +3112,16 @@ static const FFlogo M[] = {
             FF_COLOR_FG_WHITE,
         },
         .colorKeys = FF_COLOR_FG_LIGHT_BLACK,
+        .colorTitle = FF_COLOR_FG_DEFAULT,
+    },
+    // Minimal System
+    {
+        .names = {"Minimal_System"},
+        .lines = FASTFETCH_DATATEXT_LOGO_MINIMAL,
+        .colors = {
+            FF_COLOR_FG_RED,
+        },
+        .colorKeys = FF_COLOR_FG_CYAN,
         .colorTitle = FF_COLOR_FG_DEFAULT,
     },
     // Minix
