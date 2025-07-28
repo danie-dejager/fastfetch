@@ -475,11 +475,11 @@
             "type": "string"
         },
         "usersFormat": {
-            "description": "Output format of the module `Users`. See Wiki for formatting syntax\n    1. {name}: User name\n    2. {host-name}: Host name\n    3. {session}: Session name\n    4. {client-ip}: Client IP\n    5. {login-time}: Login Time in local timezone\n    6. {days}: Days after login\n    7. {hours}: Hours after login\n    8. {minutes}: Minutes after login\n    9. {seconds}: Seconds after login\n    10. {milliseconds}: Milliseconds after login\n    11. {years}: Years integer after login\n    12. {days-of-year}: Days of year after login\n    13. {years-fraction}: Years fraction after login",
+            "description": "Output format of the module `Users`. See Wiki for formatting syntax\n    1. {name}: User name\n    2. {host-name}: Host name\n    3. {session-name}: Session name\n    4. {client-ip}: Client IP\n    5. {login-time}: Login Time in local timezone\n    6. {days}: Days after login\n    7. {hours}: Hours after login\n    8. {minutes}: Minutes after login\n    9. {seconds}: Seconds after login\n    10. {milliseconds}: Milliseconds after login\n    11. {years}: Years integer after login\n    12. {days-of-year}: Days of year after login\n    13. {years-fraction}: Years fraction after login",
             "type": "string"
         },
         "versionFormat": {
-            "description": "Output format of the module `Version`. See Wiki for formatting syntax\n    1. {name}: Project name\n    2. {version}: Version\n    3. {version-tweak}: Version tweak\n    4. {build-type}: Build type (debug or release)\n    5. {sysname}: System name\n    6. {arch}: Architecture\n    7. {cmake-built-type}: CMake build type when compiling (Debug, Release, RelWithDebInfo, MinSizeRel)\n    8. {compile-time}: Date time when compiling\n    9. {compiler}: Compiler used when compiling\n    10. {libc}: Libc used when compiling",
+            "description": "Output format of the module `Version`. See Wiki for formatting syntax\n    1. {project-name}: Project name\n    2. {version}: Version\n    3. {version-tweak}: Version tweak\n    4. {build-type}: Build type (debug or release)\n    5. {sysname}: System name\n    6. {arch}: Architecture\n    7. {cmake-built-type}: CMake build type when compiling (Debug, Release, RelWithDebInfo, MinSizeRel)\n    8. {compile-time}: Date time when compiling\n    9. {compiler}: Compiler used when compiling\n    10. {libc}: Libc used when compiling",
             "type": "string"
         },
         "vulkanFormat": {
@@ -1961,7 +1961,8 @@
                                     },
                                     "hideFolders": {
                                         "type": "string",
-                                        "description": "A colon (semicolon on Windows) separated list of folder paths to hide from the disk output\nDefault: /efi:/boot:/boot/efi"
+                                        "description": "A colon (semicolon on Windows) separated list of folder paths to hide from the disk output",
+                                        "default": "/efi:/boot:/boot/efi:/boot/firmware"
                                     },
                                     "hideFS": {
                                         "type": "string",
