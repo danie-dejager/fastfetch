@@ -1,3 +1,4 @@
+#include "common/duration.h"
 #include "common/printing.h"
 #include "common/jsonconfig.h"
 #include "common/time.h"
@@ -18,13 +19,12 @@ void ffPrintUptime(FFUptimeOptions* options)
     }
 
     uint64_t uptime = result.uptime;
+    FF_STRBUF_AUTO_DESTROY buffer = ffStrbufCreate();
+    ffDurationAppendNum((uptime + 500) / 1000, &buffer);
 
     if(options->moduleArgs.outputFormat.length == 0)
     {
         ffPrintLogoAndKey(FF_UPTIME_MODULE_NAME, 0, &options->moduleArgs, FF_PRINT_TYPE_DEFAULT);
-        FF_STRBUF_AUTO_DESTROY buffer = ffStrbufCreate();
-        ffParseDuration((uptime + 500) / 1000, &buffer);
-
         ffStrbufPutTo(&buffer, stdout);
     }
     else
@@ -51,6 +51,7 @@ void ffPrintUptime(FFUptimeOptions* options)
             FF_FORMAT_ARG(age.years, "years"),
             FF_FORMAT_ARG(age.daysOfYear, "days-of-year"),
             FF_FORMAT_ARG(age.yearsFraction, "years-fraction"),
+            FF_FORMAT_ARG(buffer, "formatted")
         }));
     }
 }
