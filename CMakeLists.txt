@@ -895,7 +895,7 @@ elseif(OpenBSD)
 elseif(APPLE)
     list(APPEND LIBFASTFETCH_SRC
         src/common/io/io_unix.c
-        src/common/netif/netif_bsd.c
+        src/common/netif/netif_apple.c
         src/common/networking/networking_linux.c
         src/common/processing_linux.c
         src/common/sysctl.c
@@ -1041,7 +1041,7 @@ elseif(SunOS)
     list(APPEND LIBFASTFETCH_SRC
         src/common/dbus.c
         src/common/io/io_unix.c
-        src/common/netif/netif_bsd.c
+        src/common/netif/netif_apple.c
         src/common/networking/networking_linux.c
         src/common/processing_linux.c
         src/detection/battery/battery_nosupport.c
