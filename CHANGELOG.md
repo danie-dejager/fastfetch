@@ -1,4 +1,4 @@
-# WIP
+# 2.50.0
 
 Changes:
 * Keys in JSON configuration files are now case-sensitive, as stated in v2.49.0
@@ -22,12 +22,16 @@ Features:
     * For IPv6, first GUA or ULA that is not deprecated nor temporary is shown
 * Support interface speed detection on SunOS (LocalIP, SunOS)
 * Detect Xlibre (#1888, WM, Linux)
+* Improve accuracy of color detection (Cursor, macOS)
 
 Bugfixes:
 * Fix possible segfault when parsing color strings in JSON config (#1878)
 * Fix gpu driver detection when DRM is used (GPU, FreeBSD)
 * Fix default route detection on DragonFly BSD (LocalIP, DFBSD)
 * Fix lliurex detection (#1882, OS, Linux)
+
+Logos:
+* Add ObsidianOS (#1890)
 
 # 2.49.0
 
