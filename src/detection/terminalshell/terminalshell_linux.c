@@ -51,7 +51,6 @@ static pid_t getShellInfo(FFShellResult* result, pid_t pid)
                 ffStrbufEqualS(&result->processName, "perf")                ||
                 ffStrbufEqualS(&result->processName, "guake-wrapped")       ||
                 ffStrbufEqualS(&result->processName, "time")                ||
-                ffStrbufContainS(&result->processName, "hyfetch")           || //when hyfetch uses fastfetch as backend
                 ffStrbufEqualS(&result->processName, "clifm")               || //https://github.com/leo-arch/clifm/issues/289
                 ffStrbufEqualS(&result->processName, "valgrind")            ||
                 ffStrbufEqualS(&result->processName, "fastfetch")           || //#994
@@ -241,7 +240,7 @@ static void getTerminalFromEnv(FFTerminalResult* result)
     }
     #endif
 
-    #if defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__)
+    #if defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__GNU__)
     //Konsole
     else if(
         getenv("KONSOLE_VERSION") != NULL
@@ -334,7 +333,7 @@ static void setTerminalInfoDetails(FFTerminalResult* result)
     else if(ffStrbufEqualS(&result->processName, "com.termux"))
         ffStrbufInitStatic(&result->prettyName, "Termux");
 
-    #elif defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__)
+    #elif defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__GNU__)
 
     else if(ffStrbufStartsWithS(&result->processName, "gnome-terminal"))
         ffStrbufInitStatic(&result->prettyName, "GNOME Terminal");
