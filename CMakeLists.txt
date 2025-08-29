@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.12.0) # target_link_libraries with OBJECT libs & project homepage url
 
 project(fastfetch
-    VERSION 2.50.2
+    VERSION 2.51.0
     LANGUAGES C
     DESCRIPTION "Fast neofetch-like system information tool"
     HOMEPAGE_URL "https://github.com/fastfetch-cli/fastfetch"
@@ -599,7 +599,7 @@ elseif(ANDROID)
         src/detection/diskio/diskio_linux.c
         src/detection/displayserver/displayserver_android.c
         src/detection/font/font_nosupport.c
-        src/detection/gpu/gpu_nosupport.c
+        src/detection/gpu/gpu_android.c
         src/detection/host/host_android.c
         src/detection/icons/icons_nosupport.c
         src/detection/initsystem/initsystem_linux.c
