@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.12.0) # target_link_libraries with OBJECT libs & project homepage url
 
 project(fastfetch
-    VERSION 2.51.0
+    VERSION 2.51.1
     LANGUAGES C
     DESCRIPTION "Fast neofetch-like system information tool"
     HOMEPAGE_URL "https://github.com/fastfetch-cli/fastfetch"
@@ -1728,6 +1728,9 @@ elseif(GNU)
         PRIVATE "m"
     )
 elseif(ANDROID)
+    target_link_libraries(libfastfetch
+        PRIVATE "m"
+    )
     CHECK_LIBRARY_EXISTS(-l:libandroid-wordexp.a wordexp "" HAVE_LIBANDROID_WORDEXP_STATIC)
     if(HAVE_LIBANDROID_WORDEXP_STATIC)
         target_link_libraries(libfastfetch
