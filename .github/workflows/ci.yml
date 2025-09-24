@@ -89,8 +89,11 @@ jobs:
       - name: cat /proc/cpuinfo
         run: cat /proc/cpuinfo
 
+      - name: add gcc-13 repo
+        run: sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+
       - name: install required packages
-        run: sudo apt-get update && sudo apt-get install -y libvulkan-dev libwayland-dev libxrandr-dev libxcb-randr0-dev libdconf-dev libdbus-1-dev libmagickcore-dev libsqlite3-dev librpm-dev libegl-dev libglx-dev ocl-icd-opencl-dev libpulse-dev libdrm-dev libelf-dev libddcutil-dev libchafa-dev directx-headers-dev rpm ninja-build
+        run: sudo apt-get update && sudo apt-get install -y gcc-13 g++-13 libvulkan-dev libwayland-dev libxrandr-dev libxcb-randr0-dev libdconf-dev libdbus-1-dev libmagickcore-dev libsqlite3-dev librpm-dev libegl-dev libglx-dev ocl-icd-opencl-dev libpulse-dev libdrm-dev libelf-dev libddcutil-dev libchafa-dev directx-headers-dev rpm ninja-build
 
       - name: install linuxbrew packages
         run: |
@@ -104,7 +107,7 @@ jobs:
           languages: c
 
       - name: configure project
-        run: PKG_CONFIG_PATH=/home/linuxbrew/.linuxbrew/lib/pkgconfig:$PKG_CONFIG_PATH cmake -GNinja -DSET_TWEAK=Off -DBUILD_TESTS=On -DENABLE_EMBEDDED_PCIIDS=On -DENABLE_EMBEDDED_AMDGPUIDS=On -DCMAKE_INSTALL_PREFIX=/usr .
+        run: CC=gcc-13 CXX=g++-13 PKG_CONFIG_PATH=/home/linuxbrew/.linuxbrew/lib/pkgconfig:$PKG_CONFIG_PATH cmake -GNinja -DSET_TWEAK=Off -DBUILD_TESTS=On -DENABLE_EMBEDDED_PCIIDS=On -DENABLE_EMBEDDED_AMDGPUIDS=On -DCMAKE_INSTALL_PREFIX=/usr .
 
       - name: build project
         run: cmake --build . --target package --verbose -j4
@@ -169,12 +172,13 @@ jobs:
           githubToken: ${{ github.token }}
           run: |
             uname -a
-            apt-get update && apt-get install -y ca-certificates gpg curl
+            apt-get update && apt-get install -y software-properties-common ca-certificates gpg curl
+            add-apt-repository -y ppa:ubuntu-toolchain-r/test
             curl -L https://apt.kitware.com/keys/kitware-archive-latest.asc | gpg --dearmor - | tee /usr/share/keyrings/kitware-archive-keyring.gpg >/dev/null
             echo 'deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ focal main' | tee /etc/apt/sources.list.d/kitware.list >/dev/null
             echo -e 'Acquire::https::Verify-Peer "false";\nAcquire::https::Verify-Host "false";' >> /etc/apt/apt.conf.d/99ignore-certificates
-            apt-get update && apt-get install -y cmake make g++ libvulkan-dev libwayland-dev libxrandr-dev libxcb-randr0-dev libdconf-dev libdbus-1-dev libmagickcore-dev libsqlite3-dev librpm-dev libegl-dev libglx-dev ocl-icd-opencl-dev libpulse-dev libdrm-dev libelf-dev rpm
-            cmake -DSET_TWEAK=Off -DBUILD_TESTS=On -DCMAKE_INSTALL_PREFIX=/usr .
+            apt-get update && apt-get install -y cmake make gcc-13 libvulkan-dev libwayland-dev libxrandr-dev libxcb-randr0-dev libdconf-dev libdbus-1-dev libmagickcore-dev libsqlite3-dev librpm-dev libegl-dev libglx-dev ocl-icd-opencl-dev libpulse-dev libdrm-dev libelf-dev rpm
+            CC=gcc-13 cmake -DSET_TWEAK=Off -DBUILD_TESTS=On -DENABLE_DIRECTX_HEADERS=Off -DCMAKE_INSTALL_PREFIX=/usr .
             cmake --build . --target package --verbose -j4
             ./fastfetch --list-features
             time ./fastfetch -c presets/ci.jsonc --stat false
@@ -209,8 +213,8 @@ jobs:
           run: |
             uname -a
             apt-get update && apt-get install -y wget
-            apt-get install -y cmake make g++ libvulkan-dev libwayland-dev libxrandr-dev libxcb-randr0-dev libdconf-dev libdbus-1-dev libmagickcore-dev libsqlite3-dev librpm-dev libegl-dev libglx-dev ocl-icd-opencl-dev libpulse-dev libdrm-dev libelf-dev rpm
-            cmake -DSET_TWEAK=Off -DBUILD_TESTS=On -DCMAKE_INSTALL_PREFIX=/usr .
+            apt-get install -y cmake make gcc libvulkan-dev libwayland-dev libxrandr-dev libxcb-randr0-dev libdconf-dev libdbus-1-dev libmagickcore-dev libsqlite3-dev librpm-dev libegl-dev libglx-dev ocl-icd-opencl-dev libpulse-dev libdrm-dev libelf-dev rpm
+            cmake -DSET_TWEAK=Off -DBUILD_TESTS=On -DENABLE_DIRECTX_HEADERS=Off -DCMAKE_INSTALL_PREFIX=/usr .
             cmake --build . --target package --verbose -j4
             ./fastfetch --list-features
             time ./fastfetch -c presets/ci.jsonc --stat false
@@ -246,12 +250,14 @@ jobs:
         id: runcmd
         with:
           arch: ${{ matrix.arch }}
-          distro: ubuntu20.04
+          distro: ubuntu22.04
           githubToken: ${{ github.token }}
           run: |
             uname -a
-            apt-get update && apt-get install -y cmake make g++ libvulkan-dev libwayland-dev libxrandr-dev libxcb-randr0-dev libdconf-dev libdbus-1-dev libmagickcore-dev libsqlite3-dev librpm-dev libegl-dev libglx-dev ocl-icd-opencl-dev libpulse-dev libdrm-dev libchafa-dev libelf-dev rpm
-            cmake -DSET_TWEAK=Off -DBUILD_TESTS=On -DCMAKE_INSTALL_PREFIX=/usr .
+            apt-get update && apt-get install -y software-properties-common
+            add-apt-repository -y ppa:ubuntu-toolchain-r/test
+            apt-get update && apt-get install -y cmake make gcc-13 libvulkan-dev libwayland-dev libxrandr-dev libxcb-randr0-dev libdconf-dev libdbus-1-dev libmagickcore-dev libsqlite3-dev librpm-dev libegl-dev libglx-dev ocl-icd-opencl-dev libpulse-dev libdrm-dev libchafa-dev libelf-dev rpm
+            CC=gcc-13 cmake -DSET_TWEAK=Off -DBUILD_TESTS=On -DENABLE_DIRECTX_HEADERS=Off -DCMAKE_INSTALL_PREFIX=/usr .
             cmake --build . --target package --verbose -j4
             ./fastfetch --list-features
             time ./fastfetch -c presets/ci.jsonc --stat false
@@ -449,7 +455,8 @@ jobs:
           version: '7.7'
           run: |
             uname -a
-            sudo pkg_add -r cmake git pkgconf wayland vulkan-headers vulkan-loader glib2 dconf dbus sqlite3 imagemagick chafa
+            sudo pkg_add -u
+            sudo pkg_add -r llvm cmake git pkgconf wayland vulkan-headers vulkan-loader glib2 dconf dbus sqlite3 imagemagick chafa
             cmake -DSET_TWEAK=Off -DBUILD_TESTS=On -DENABLE_EMBEDDED_PCIIDS=On -DENABLE_EMBEDDED_AMDGPUIDS=On .
             cmake --build . --target package --verbose -j4
             ./fastfetch --list-features
@@ -674,29 +681,29 @@ jobs:
           repository: ${{ github.repository }}
 
       - name: download artifacts
-        if: needs.linux-amd64.outputs.ffversion != steps.get_version_release.outputs.release
+        if: needs.linux-hosts.outputs.ffversion != steps.get_version_release.outputs.release
         uses: actions/download-artifact@v5
 
       - name: create release
-        if: needs.linux-amd64.outputs.ffversion != steps.get_version_release.outputs.release
+        if: needs.linux-hosts.outputs.ffversion != steps.get_version_release.outputs.release
         uses: ncipollo/release-action@v1
         with:
-          tag: ${{ needs.linux-amd64.outputs.ffversion }}
+          tag: ${{ needs.linux-hosts.outputs.ffversion }}
           commit: ${{ github.sha }}
           artifactErrorsFailBuild: true
           artifacts: fastfetch-*/fastfetch-*
-          body: "Please refer to [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/${{ needs.linux-amd64.outputs.ffversion }}/CHANGELOG.md) for details."
+          body: "Please refer to [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/${{ needs.linux-hosts.outputs.ffversion }}/CHANGELOG.md) for details."
 
       - name: download source tarballs
-        if: needs.linux-amd64.outputs.ffversion != steps.get_version_release.outputs.release
+        if: needs.linux-hosts.outputs.ffversion != steps.get_version_release.outputs.release
         run: |
-          for i in 1 2 3 4 5; do curl -L --remote-name-all --output-dir fastfetch-source --create-dirs https://github.com/${{ github.repository }}/archive/refs/tags/${{ needs.linux-amd64.outputs.ffversion }}.{tar.gz,zip} && break || sleep 5; done
+          for i in 1 2 3 4 5; do curl -L --remote-name-all --output-dir fastfetch-source --create-dirs https://github.com/${{ github.repository }}/archive/refs/tags/${{ needs.linux-hosts.outputs.ffversion }}.{tar.gz,zip} && break || sleep 5; done
           ls fastfetch-*/*
 
       - name: generate release notes
-        if: needs.linux-amd64.outputs.ffversion != steps.get_version_release.outputs.release
+        if: needs.linux-hosts.outputs.ffversion != steps.get_version_release.outputs.release
         run: |
-          echo "Please refer to [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/${{ needs.linux-amd64.outputs.ffversion }}/CHANGELOG.md) for details." > fastfetch-release-notes.md
+          echo "Please refer to [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/${{ needs.linux-hosts.outputs.ffversion }}/CHANGELOG.md) for details." > fastfetch-release-notes.md
           echo -e "\n---\n\n<details><summary>SHA256SUMs</summary><br>\n\n\`\`\`" >> fastfetch-release-notes.md
           sha256sum fastfetch-*/* >> fastfetch-release-notes.md
           echo -e "\`\`\`\n</details>" >> fastfetch-release-notes.md
@@ -705,10 +712,10 @@ jobs:
           echo -e "\`\`\`\n</details>" >> fastfetch-release-notes.md
 
       - name: update release body
-        if: needs.linux-amd64.outputs.ffversion != steps.get_version_release.outputs.release
+        if: needs.linux-hosts.outputs.ffversion != steps.get_version_release.outputs.release
         uses: ncipollo/release-action@v1
         with:
-          tag: ${{ needs.linux-amd64.outputs.ffversion }}
+          tag: ${{ needs.linux-hosts.outputs.ffversion }}
           commit: ${{ github.sha }}
           bodyFile: fastfetch-release-notes.md
           allowUpdates: true
