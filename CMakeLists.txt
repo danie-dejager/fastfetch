@@ -974,7 +974,7 @@ elseif(APPLE)
         src/detection/terminalfont/terminalfont_apple.m
         src/detection/terminalshell/terminalshell_linux.c
         src/detection/terminalsize/terminalsize_linux.c
-        src/detection/theme/theme_nosupport.c
+        src/detection/theme/theme_apple.c
         src/detection/tpm/tpm_apple.c
         src/detection/uptime/uptime_bsd.c
         src/detection/users/users_linux.c
@@ -1035,7 +1035,7 @@ elseif(WIN32)
         src/detection/physicalmemory/physicalmemory_linux.c
         src/detection/netio/netio_windows.c
         src/detection/opengl/opengl_windows.c
-        src/detection/os/os_windows.c
+        src/detection/os/os_windows.cpp
         src/detection/packages/packages_windows.c
         src/detection/poweradapter/poweradapter_nosupport.c
         src/detection/processes/processes_windows.c
@@ -1044,7 +1044,7 @@ elseif(WIN32)
         src/detection/terminalfont/terminalfont_windows.c
         src/detection/terminalshell/terminalshell_windows.c
         src/detection/terminalsize/terminalsize_windows.c
-        src/detection/theme/theme_nosupport.c
+        src/detection/theme/theme_windows.c
         src/detection/tpm/tpm_windows.c
         src/detection/uptime/uptime_windows.c
         src/detection/users/users_windows.c
@@ -1689,7 +1689,6 @@ elseif(WIN32)
         PRIVATE "wtsapi32"
         PRIVATE "imagehlp"
         PRIVATE "cfgmgr32"
-        PRIVATE "winbrand"
         PRIVATE "propsys"
         PRIVATE "secur32"
     )
@@ -2077,7 +2076,7 @@ endif()
 
 set(CPACK_SET_DESTDIR ON)
 
-set(CPACK_PACKAGE_CONTACT "Linus Dierheimer <Linus@Dierheimer.de>")
+set(CPACK_PACKAGE_CONTACT "Carter Li <zhangsongcui@live.cn>")
 set(CPACK_PACKAGE_DESCRIPTION "\
 fastfetch is a neofetch-like tool for fetching system information and displaying them in a pretty way. \
 It is written mostly in C to achieve much better performance.\
