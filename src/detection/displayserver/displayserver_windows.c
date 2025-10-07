@@ -1,8 +1,5 @@
 #include "displayserver.h"
-#include "detection/os/os.h"
 #include "util/windows/unicode.h"
-#include "util/windows/registry.h"
-#include "util/mallocHelper.h"
 #include "util/edidHelper.h"
 
 #include <dwmapi.h>
@@ -232,6 +229,7 @@ static void detectDisplays(FFDisplayServerResult* ds)
                 }
                 if (edidLength > 0)
                     ffEdidGetSerialAndManufactureDate(edidData, &display->serial, &display->manufactureYear, &display->manufactureWeek);
+                display->vrrStatus = path->flags & DISPLAYCONFIG_PATH_BOOST_REFRESH_RATE ? FF_DISPLAY_VRR_STATUS_ENABLED : FF_DISPLAY_VRR_STATUS_DISABLED;
             }
         }
     }
