@@ -1,5 +1,7 @@
 # 2.54.0
 
+Windows binaries in Release page are now signed using SignPath.
+
 Changes:
 * Moves macOS and Windows design language detection from the DE module to the Theme module
 
@@ -20,6 +22,9 @@ Features:
     * `display.key.type: "both-N"` where N is `0-4`
     * Useful for non-monospaced Nerd Fonts
 * Adds detection support for modern Samsung Exynos SoCs (CPU, Android)
+* Adds a new CMake option `-DENABLE_WORDEXP=<ON|OFF>` to enable or disable using `wordexp(3)` for acquiring logo file paths (`logo.source`)
+    * Enabled by default for compatibility
+    * Disabling this option reverts to using `glob(3)`, which is less functional but more secure
 
 Bugfixes:
 * Avoids integer overflow when calculating swap size (#1988, Swap, Windows)
@@ -29,11 +34,12 @@ Bugfixes:
 * Fixes incorrect glibc dependency in polyfilled DEB packages (#1983, Linux)
 * Fixes corrupted binaries in polyfilled RPM packages (#1990, Linux)
 * Fixes crashes on ancient Android kernels (#1993, Disk, Android)
+* Fixes incorrect usage of `glob(3)` (OpenBSD)
 * Prefers resolutions reported by RandR mode info, fixing incorrect resolutions on XFCE when DPI scaling is enabled (Display, Linux)
 * Various code cleanups and minor fixes
 
 Logos:
-* Adds secureblue, PrismLinux, EmperorOS
+* Adds secureblue, PrismLinux, EmperorOS and Zraxyl
 * Updates T2
 
 # 2.53.0

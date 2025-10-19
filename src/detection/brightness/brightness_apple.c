@@ -123,11 +123,12 @@ static const char* detectWithDdcci(FF_MAYBE_UNUSED const FFDisplayServerResult* 
     return NULL;
 }
 #else
-static IOOptionBits getSupportedTransactionType(void) {
+static IOOptionBits getSupportedTransactionType(void)
+{
     FF_IOOBJECT_AUTO_RELEASE io_iterator_t iterator = IO_OBJECT_NULL;
 
     if (IOServiceGetMatchingServices(MACH_PORT_NULL, IOServiceNameMatching("IOFramebufferI2CInterface"), &iterator) != KERN_SUCCESS)
-        return 0;
+        return kIOI2CNoTransactionType;
 
     io_registry_entry_t registryEntry;
     while ((registryEntry = IOIteratorNext(iterator)) != MACH_PORT_NULL)
@@ -140,31 +141,25 @@ static IOOptionBits getSupportedTransactionType(void) {
             int64_t types = 0;
             ffCfNumGetInt64(IOI2CTransactionTypes, &types);
 
-            /*
-             We want DDCciReply but Simple is better than No-thing.
-             Combined and DisplayPortNative are not useful in our case.
-             */
             if (types) {
-                if ((1 << kIOI2CSimpleTransactionType) & (uint64_t) types)
-                    return kIOI2CSimpleTransactionType;
                 if ((1 << kIOI2CDDCciReplyTransactionType) & (uint64_t) types)
                     return kIOI2CDDCciReplyTransactionType;
-                if ((1 << kIOI2CCombinedTransactionType) & (uint64_t) types)
-                    return kIOI2CCombinedTransactionType;
-                if ((1 << kIOI2CDisplayPortNativeTransactionType) & (uint64_t) types)
-                    return kIOI2CDisplayPortNativeTransactionType;
+                if ((1 << kIOI2CSimpleTransactionType) & (uint64_t) types)
+                    return kIOI2CSimpleTransactionType;
             }
         }
         break;
     }
 
-    return 0;
+    return kIOI2CNoTransactionType;
 }
 
 static const char* detectWithDdcci(const FFDisplayServerResult* displayServer, FFBrightnessOptions* options, FFlist* result)
 {
     if (!CGSServiceForDisplayNumber) return "CGSServiceForDisplayNumber is not available";
     IOOptionBits transactionType = getSupportedTransactionType();
+    if (transactionType == kIOI2CNoTransactionType)
+        return "No supported IOI2C transaction type found";
 
     FF_LIST_FOR_EACH(FFDisplayResult, display, displayServer->displays)
     {
