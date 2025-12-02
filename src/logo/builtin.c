@@ -181,6 +181,20 @@ static const FFlogo A[] = {
             FF_COLOR_FG_256 "178",
         }
     },
+    // Amiga
+    {
+        .names = {"Amiga"},
+        .lines = FASTFETCH_DATATEXT_LOGO_AMIGA,
+        .colors = {
+            FF_COLOR_FG_RED,
+            FF_COLOR_FG_LIGHT_RED,
+            FF_COLOR_FG_YELLOW,
+            FF_COLOR_FG_BLUE,
+            FF_COLOR_FG_CYAN,
+    	    FF_COLOR_FG_LIGHT_YELLOW,
+            FF_COLOR_FG_GREEN,
+        }
+    },
     // AmogOS
     {
         .names = {"AmogOS"},
@@ -3685,6 +3699,15 @@ static const FFlogo O[] = {
             FF_COLOR_FG_DEFAULT,
             FF_COLOR_FG_DEFAULT,
         },
+    },
+    // OS/2 Warp
+    {
+        .names = {"OS2Warp"},
+        .lines = FASTFETCH_DATATEXT_LOGO_OS2WARP,
+        .colors = {
+            FF_COLOR_FG_LIGHT_WHITE,
+            FF_COLOR_FG_LIGHT_BLUE,
+        }
     },
     // OS_Elbrus
     {
