@@ -1,6 +1,6 @@
 Name:           fastfetch
 Version:        2.56.1
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Like neofetch, but much faster because written in c
  
 License:        MIT
@@ -104,6 +104,7 @@ upx %{buildroot}/%{_bindir}/%{name}
 %{_datadir}/zsh/site-functions/_%{name}
 
 %changelog
+* Sun Jan 11 2025 - Danie de Jager <danie.dejager@gmail.com> - 2.56.1-2
 * Thu Dec 18 2025 - Danie de Jager <danie.dejager@gmail.com> - 2.56.1-1
 * Fri Dec 5 2025 - Danie de Jager <danie.dejager@gmail.com> - 2.56.0-1
 * Tue Dec 2 2025 - Danie de Jager <danie.dejager@gmail.com> - 2.55.1-2
