@@ -92,7 +92,6 @@ cmake_dependent_option(ENABLE_DDCUTIL "Enable ddcutil" ON "LINUX" OFF)
 cmake_dependent_option(ENABLE_DIRECTX_HEADERS "Enable DirectX headers for WSL" ON "LINUX" OFF)
 cmake_dependent_option(ENABLE_ELF "Enable libelf" ON "LINUX OR ANDROID OR DragonFly OR Haiku OR GNU" OFF)
 cmake_dependent_option(ENABLE_THREADS "Enable multithreading" ON "Threads_FOUND" OFF)
-cmake_dependent_option(ENABLE_PCIACCESS "Enable libpciaccess" ON "GNU" OFF)
 
 option(ENABLE_ZLIB "Enable zlib" ON)
 option(ENABLE_SYSTEM_YYJSON "Use system provided (instead of fastfetch embedded) yyjson library" OFF)
@@ -109,6 +108,9 @@ option(ENABLE_WORDEXP "Enable using of wordexp(3) if available, instead of glob(
 option(ENABLE_LIBZFS "Enable libzfs" ON)
 if(WIN32 AND NOT CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
     option(ENABLE_WIN7_COMPAT "Enable Windows 7 compatibility" ON)
+endif()
+if(APPLE)
+    option(ENABLE_APPLE_MEMSIZE_USABLE "Use usable memory size as total memory size in Memory module, to match other systems" OFF)
 endif()
 
 set(BINARY_LINK_TYPE_OPTIONS dlopen dynamic static)
@@ -1259,7 +1261,7 @@ elseif(GNU)
         src/detection/displayserver/linux/xcb.c
         src/detection/displayserver/linux/xlib.c
         src/detection/font/font_linux.c
-        src/detection/gpu/gpu_general.c
+        src/detection/gpu/gpu_gnu.c
         src/detection/gpu/gpu_pci.c
         src/detection/gtk_qt/gtk.c
         src/detection/host/host_nosupport.c
@@ -1340,6 +1342,15 @@ endif()
 add_library(libfastfetch OBJECT
     ${LIBFASTFETCH_SRC}
 )
+
+include(CheckCSourceCompiles)
+check_c_source_compiles("int main(void){int arr[1];return _Countof(arr);}" COMPILER_SUPPORTS_COUNT_OF)
+if(COMPILER_SUPPORTS_COUNT_OF)
+    message(STATUS "_Countof is supported by the compiler")
+    target_compile_definitions(libfastfetch PUBLIC FF_SUPPORTS_COUNT_OF=1)
+else()
+    message(STATUS "_Countof is NOT supported by the compiler")
+endif()
 
 if(yyjson_FOUND)
     target_compile_definitions(libfastfetch PUBLIC FF_USE_SYSTEM_YYJSON=1)
@@ -1422,6 +1433,14 @@ elseif(Haiku)
 elseif(GNU)
     # On Hurd PATH_MAX is not defined. Set an arbitrary limit as workaround.
     target_compile_definitions(libfastfetch PUBLIC _GNU_SOURCE PATH_MAX=4096 O_PATH=0)
+endif()
+
+if(APPLE)
+    if(ENABLE_APPLE_MEMSIZE_USABLE)
+        target_compile_definitions(libfastfetch PUBLIC FF_APPLE_MEMSIZE_USABLE=1)
+    else()
+        target_compile_definitions(libfastfetch PUBLIC FF_APPLE_MEMSIZE_USABLE=0)
+    endif()
 endif()
 
 if(WIN32)
@@ -1629,10 +1648,6 @@ ff_lib_enable(ELF
 ff_lib_enable(DIRECTX_HEADERS
     "DirectX-Headers"
     "DirectX-Headers"
-)
-ff_lib_enable(PCIACCESS
-    "pciaccess"
-    "pciaccess"
 )
 
 if(ENABLE_THREADS)
