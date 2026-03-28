@@ -55,12 +55,15 @@ void ffInitInstance(void)
         setlocale(LC_TIME, "");
     #endif
 
-    initState(&instance.state);
     defaultConfig();
+    initState(&instance.state);
 }
 
 static volatile bool ffDisableLinewrap = true;
 static volatile bool ffHideCursor = true;
+#if _WIN32
+static volatile UINT oldCp = CP_UTF8;
+#endif
 
 static void resetConsole(void)
 {
@@ -70,12 +73,15 @@ static void resetConsole(void)
     if(ffHideCursor)
         fputs("\033[?25h", stdout);
 
-    #if defined(_WIN32)
-        fflush(stdout);
-    #endif
-
     if(instance.state.dynamicInterval > 0)
         fputs("\033[?1049l", stdout); // Disable alternate buffer
+
+    #if defined(_WIN32)
+        fflush(stdout);
+
+        if(oldCp != CP_UTF8)
+            SetConsoleOutputCP(oldCp);
+    #endif
 }
 
 #ifdef _WIN32
@@ -106,9 +112,12 @@ void ffStart(void)
     SetConsoleCtrlHandler(consoleHandler, TRUE);
     HANDLE hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
     DWORD mode = 0;
-    GetConsoleMode(hStdout, &mode);
-    SetConsoleMode(hStdout, mode | ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
-    SetConsoleOutputCP(CP_UTF8);
+    if (GetConsoleMode(hStdout, &mode))
+    {
+        SetConsoleMode(hStdout, mode | ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+        oldCp = GetConsoleOutputCP();
+        if (oldCp != CP_UTF8) SetConsoleOutputCP(CP_UTF8);
+    }
     #else
     if (instance.config.display.noBuffer) setvbuf(stdout, NULL, _IONBF, 0);
     struct sigaction action = { .sa_handler = exitSignalHandler };
@@ -236,9 +245,6 @@ void ffListFeatures(void)
         #endif
         #if FF_HAVE_LIBZFS
             "libzfs\n"
-        #endif
-        #if FF_HAVE_DIRECTX_HEADERS
-            "Directx Headers\n"
         #endif
         #if FF_USE_SYSTEM_YYJSON
             "System yyjson\n"

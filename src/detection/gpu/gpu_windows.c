@@ -1,13 +1,14 @@
 #include "gpu.h"
 #include "detection/gpu/gpu_driver_specific.h"
-#include "common/library.h"
 #include "common/windows/unicode.h"
 #include "common/windows/registry.h"
 #include "common/mallocHelper.h"
 #include "common/debug.h"
 #include "common/windows/nt.h"
 
+#include <windows.h>
 #include <cfgmgr32.h>
+#include "d3dkmthk.h"
 
 #define FF_EMPTY_GUID_STR L"{00000000-0000-0000-0000-000000000000}"
 enum { FF_GUID_STRLEN = sizeof(FF_EMPTY_GUID_STR) / sizeof(wchar_t) - 1 };
@@ -18,6 +19,13 @@ wchar_t regDriverKey[] = L"SYSTEM\\CurrentControlSet\\Control\\Class\\" FF_EMPTY
 const uint32_t regDriverKeyPrefixLength = (uint32_t) __builtin_strlen("SYSTEM\\CurrentControlSet\\Control\\Class\\");
 
 #define GUID_DEVCLASS_DISPLAY_STRING L"{4d36e968-e325-11ce-bfc1-08002be10318}" // Found in <devguid.h>
+
+static inline void wrapRegCloseKey(HKEY* phKey)
+{
+    if(*phKey)
+        RegCloseKey(*phKey);
+}
+#define FF_HKEY_AUTO_DESTROY __attribute__((__cleanup__(wrapRegCloseKey)))
 
 const char* ffDetectGPUImpl(FF_MAYBE_UNUSED const FFGPUOptions* options, FFlist* gpus)
 {
@@ -115,7 +123,7 @@ const char* ffDetectGPUImpl(FF_MAYBE_UNUSED const FFGPUOptions* options, FFlist*
 
         uint64_t adapterLuid = 0;
 
-        FF_HKEY_AUTO_DESTROY hVideoIdKey = NULL;
+        FF_HKEY_AUTO_DESTROY HKEY hVideoIdKey = NULL;
 
         wchar_t buffer[256];
         ULONG bufferLen = 0;
@@ -147,7 +155,7 @@ const char* ffDetectGPUImpl(FF_MAYBE_UNUSED const FFGPUOptions* options, FFlist*
             {
                 FF_DEBUG("Found VideoID: %ls", buffer);
                 wmemcpy(regDirectxKey + regDirectxKeyPrefixLength, buffer, FF_GUID_STRLEN);
-                FF_HKEY_AUTO_DESTROY hDirectxKey = NULL;
+                FF_AUTO_CLOSE_FD HANDLE hDirectxKey = NULL;
                 if (ffRegOpenKeyForRead(HKEY_LOCAL_MACHINE, regDirectxKey, &hDirectxKey, NULL))
                 {
                     FF_DEBUG("Opened DirectX registry key");
@@ -237,7 +245,7 @@ const char* ffDetectGPUImpl(FF_MAYBE_UNUSED const FFGPUOptions* options, FFlist*
             {
                 FF_DEBUG("Found driver GUID: %ls", buffer);
                 wmemcpy(regDriverKey + regDriverKeyPrefixLength, buffer, FF_GUID_STRLEN + strlen("\\0000"));
-                FF_HKEY_AUTO_DESTROY hRegDriverKey = NULL;
+                FF_AUTO_CLOSE_FD HANDLE hRegDriverKey = NULL;
                 if (ffRegOpenKeyForRead(HKEY_LOCAL_MACHINE, regDriverKey, &hRegDriverKey, NULL))
                 {
                     FF_DEBUG("Opened driver registry key");
@@ -290,7 +298,7 @@ const char* ffDetectGPUImpl(FF_MAYBE_UNUSED const FFGPUOptions* options, FFlist*
         if (options->driverSpecific && getDriverSpecificDetectionFn(gpu->vendor.chars, &detectFn, &dllName))
         {
             FF_DEBUG("Calling driver-specific detection function for vendor: %s, DLL: %s", gpu->vendor.chars, dllName);
-            detectFn(
+            FF_MAYBE_UNUSED const char* error = detectFn(
                 &(FFGpuDriverCondition) {
                     .type = (deviceId > 0 ? FF_GPU_DRIVER_CONDITION_TYPE_DEVICE_ID : 0)
                             | (adapterLuid > 0 ? FF_GPU_DRIVER_CONDITION_TYPE_LUID : 0)
@@ -323,7 +331,7 @@ const char* ffDetectGPUImpl(FF_MAYBE_UNUSED const FFGPUOptions* options, FFlist*
                 },
                 dllName
             );
-            FF_DEBUG("Driver-specific detection completed");
+            FF_DEBUG("Driver-specific detection completed: %s", error ?: "Success");
         }
         else if (options->driverSpecific)
         {
@@ -403,7 +411,7 @@ const char* ffDetectGPUImpl(FF_MAYBE_UNUSED const FFGPUOptions* options, FFlist*
 
                 D3DKMT_CLOSEADAPTER closeAdapter = { .hAdapter = openAdapterFromLuid.hAdapter };
                 (void) D3DKMTCloseAdapter(&closeAdapter);
-                openAdapterFromLuid.hAdapter = 0;
+                openAdapterFromLuid.hAdapter = (D3DKMT_HANDLE) {};
                 FF_DEBUG("Closed adapter handle");
             }
             else
@@ -430,25 +438,82 @@ const char* ffDetectGPUImpl(FF_MAYBE_UNUSED const FFGPUOptions* options, FFlist*
                     FF_DEBUG("Failed to get GPU temperature or temperature is 0");
                 }
             }
+
+            if (options->driverSpecific && gpu->dedicated.used == FF_GPU_VMEM_SIZE_UNSET && ffIsWindows11OrGreater())
+            {
+                FF_DEBUG("Trying to get used video memory from D3DKMT method");
+                D3DKMT_QUERYSTATISTICS queryStatistics = {
+                    .Type = D3DKMT_QUERYSTATISTICS_SEGMENT_GROUP_USAGE,
+                    .AdapterLuid = *(LUID*)&adapterLuid,
+                    .QuerySegmentGroupUsage = {
+                        .PhysicalAdapterIndex = 0,
+                        .SegmentGroup = D3DKMT_MEMORY_SEGMENT_GROUP_LOCAL,
+                    },
+                };
+                if (NT_SUCCESS(D3DKMTQueryStatistics(&queryStatistics)))
+                {
+                    D3DKMT_QUERYSTATISTICS_MEMORY_USAGE* info = &queryStatistics.QueryResult.SegmentGroupUsageInformation;
+                    uint64_t used = info->AllocatedBytes + info->ModifiedBytes + info->StandbyBytes;
+                    uint64_t total = used + info->FreeBytes + info->ZeroBytes;
+                    gpu->dedicated.used = used;
+                    gpu->dedicated.total = total;
+
+                    FF_DEBUG("Found local memory size %llu / %llu", used, total);
+                }
+                else
+                {
+                    FF_DEBUG("Failed to query segment group usage for local memory");
+                }
+
+                queryStatistics.QuerySegmentGroupUsage.SegmentGroup = D3DKMT_MEMORY_SEGMENT_GROUP_NON_LOCAL;
+                if (NT_SUCCESS(D3DKMTQueryStatistics(&queryStatistics)))
+                {
+                    D3DKMT_QUERYSTATISTICS_MEMORY_USAGE* info = &queryStatistics.QueryResult.SegmentGroupUsageInformation;
+                    uint64_t used = info->AllocatedBytes + info->ModifiedBytes + info->StandbyBytes;
+                    uint64_t total = used + info->FreeBytes + info->ZeroBytes;
+                    gpu->shared.used = used;
+                    gpu->shared.total = total;
+
+                    FF_DEBUG("Found non-local memory size %llu / %llu", used, total);
+                }
+                else
+                {
+                    FF_DEBUG("Failed to query segment group usage for non-local memory");
+                }
+            }
         }
 
         if (gpu->type == FF_GPU_TYPE_UNKNOWN)
         {
             FF_DEBUG("Using fallback GPU type detection");
-            if (gpu->vendor.chars == FF_GPU_VENDOR_NAME_INTEL)
+            if (gpu->vendor.chars == FF_GPU_VENDOR_NAME_NVIDIA)
             {
-                gpu->type = gpu->deviceId == ffGPUPciAddr2Id(0, 0, 2, 0) ? FF_GPU_TYPE_INTEGRATED : FF_GPU_TYPE_DISCRETE;
-                FF_DEBUG("Intel GPU type determined: %s", gpu->type == FF_GPU_TYPE_INTEGRATED ? "Integrated" : "Discrete");
+                if (ffStrbufStartsWithIgnCaseS(&gpu->name, "GeForce") ||
+                    ffStrbufStartsWithIgnCaseS(&gpu->name, "Quadro") ||
+                    ffStrbufStartsWithIgnCaseS(&gpu->name, "Tesla"))
+                    gpu->type = FF_GPU_TYPE_DISCRETE;
             }
-            else if (gpu->dedicated.total != FF_GPU_VMEM_SIZE_UNSET)
+            else if (gpu->vendor.chars == FF_GPU_VENDOR_NAME_MTHREADS)
             {
-                gpu->type = gpu->dedicated.total >= 1024 * 1024 * 1024 ? FF_GPU_TYPE_DISCRETE : FF_GPU_TYPE_INTEGRATED;
-                FF_DEBUG("GPU type determined by memory size (%llu bytes): %s", gpu->dedicated.total, gpu->type == FF_GPU_TYPE_DISCRETE ? "Discrete" : "Integrated");
+                if (ffStrbufStartsWithIgnCaseS(&gpu->name, "MTT "))
+                    gpu->type = FF_GPU_TYPE_DISCRETE;
+            }
+            else if (gpu->vendor.chars == FF_GPU_VENDOR_NAME_INTEL)
+            {
+                // 0000:00:02.0 is reserved for Intel integrated graphics
+                gpu->type = gpu->deviceId == ffGPUPciAddr2Id(0, 0, 2, 0) ? FF_GPU_TYPE_INTEGRATED : FF_GPU_TYPE_DISCRETE;
+            }
+
+            if (gpu->type != FF_GPU_TYPE_UNKNOWN)
+                FF_DEBUG("Determined GPU type based on vendor (%s) and name: %u", gpu->vendor.chars, gpu->type);
+            else if (ffIsWindows10OrGreater())
+            {
+                const char* ffGPUDetectTypeWithDXCore(LUID adapterLuid, FFGPUResult* gpu);
+                FF_MAYBE_UNUSED const char* error = ffGPUDetectTypeWithDXCore(*(LUID*)&adapterLuid, gpu);
+                FF_DEBUG("DXCore GPU type detection result: %s", error ?: "Success");
             }
             else
-            {
-                FF_DEBUG("Unable to determine GPU type");
-            }
+                FF_DEBUG("Unable to determine GPU type by any method for this adapter");
         }
 
         FF_DEBUG("Completed processing GPU #%d - Vendor: %s, Name: %s, Type: %d", deviceCount, gpu->vendor.chars, gpu->name.chars, gpu->type);
