@@ -610,6 +610,10 @@
                                     "description": "Text data, printed as is"
                                 },
                                 {
+                                    "const": "command-raw",
+                                    "description": "Command to generate text data, printed as is"
+                                },
+                                {
                                     "const": "sixel",
                                     "description": "Image file, printed as sixel codes"
                                 },
@@ -3633,6 +3637,16 @@
                                     "namePrefix": {
                                         "description": "Show disks with given name prefix only",
                                         "type": "string"
+                                    },
+                                    "hideVirtual": {
+                                        "description": "Hide virtual disks (e.g. loop, RAM or file baked disks)",
+                                        "type": "boolean",
+                                        "default": false
+                                    },
+                                    "hideUnused": {
+                                        "description": "Hide disks with `size == 0` (likely unused/unconnected)",
+                                        "type": "boolean",
+                                        "default": true
                                     },
                                     "temp": {
                                         "$ref": "#/$defs/temperature"
