@@ -1,7 +1,8 @@
 #pragma once
 
-#ifdef _MSC_VER
-#    define __attribute__(x)
+#ifndef __has_attribute
+    #error Unsupported compiler
+    #define __attribute__(x)
 #endif
 
 #define FF_A_FALLTHROUGH __attribute__((__fallthrough__))

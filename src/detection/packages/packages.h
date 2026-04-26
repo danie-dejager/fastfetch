@@ -7,6 +7,7 @@ typedef struct FFPackagesResult {
     uint32_t amSystem;
     uint32_t amUser;
     uint32_t apk;
+    uint32_t appimage;
     uint32_t brew;
     uint32_t brewCask;
     uint32_t choco;
@@ -25,8 +26,8 @@ typedef struct FFPackagesResult {
     uint32_t lpkg;
     uint32_t lpkgbuild;
     uint32_t macports;
-    uint32_t mport;
     uint32_t moss;
+    uint32_t mport;
     uint32_t nixDefault;
     uint32_t nixSystem;
     uint32_t nixUser;
@@ -39,8 +40,8 @@ typedef struct FFPackagesResult {
     uint32_t pkgsrc;
     uint32_t pkgtool;
     uint32_t rpm;
-    uint32_t scoopUser;
     uint32_t scoopGlobal;
+    uint32_t scoopUser;
     uint32_t snap;
     uint32_t soar;
     uint32_t sorcery;

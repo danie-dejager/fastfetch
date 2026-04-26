@@ -44,6 +44,16 @@ static const FFlogo A[] = {
         .names = { "AerynOS" },
         .lines = FASTFETCH_DATATEXT_LOGO_AERYNOS,
         .colors = {
+            FF_COLOR_FG_GREEN,
+            FF_COLOR_FG_YELLOW,
+        },
+    },
+    // AerynOS_old
+    {
+        .names = { "AerynOS_old" },
+        .lines = FASTFETCH_DATATEXT_LOGO_AERYNOS_OLD,
+        .type = FF_LOGO_LINE_TYPE_ALTER_BIT,
+        .colors = {
             FF_COLOR_FG_DEFAULT,
             FF_COLOR_FG_MAGENTA,
         },
@@ -1551,6 +1561,16 @@ static const FFlogo E[] = {
             FF_COLOR_FG_DEFAULT,
         },
     },
+    // EN-OS
+    {
+        .names = {"ENOS"},
+        .lines = FASTFETCH_DATATEXT_LOGO_ENOS,
+        .colors = {
+            FF_COLOR_FG_LIGHT_BLUE,
+        },
+        .colorKeys = FF_COLOR_FG_LIGHT_BLUE,
+        .colorTitle = FF_COLOR_FG_LIGHT_BLUE,
+    },
     // EncryptOS
     {
         .names = { "EncryptOS" },
@@ -2642,6 +2662,16 @@ static const FFlogo L[] = {
         },
         .colorKeys = FF_COLOR_FG_BLUE,
         .colorTitle = FF_COLOR_FG_BLUE,
+    },
+    // LimeOS
+    {
+        .names = {"LimeOS"},
+        .lines = FASTFETCH_DATATEXT_LOGO_LIMEOS,
+        .colors = {
+            FF_COLOR_FG_DEFAULT,
+        },
+        .colorKeys = FF_COLOR_FG_DEFAULT,
+        .colorTitle = FF_COLOR_FG_DEFAULT,
     },
     // Linspire
     {
@@ -4232,6 +4262,17 @@ static const FFlogo R[] = {
         .colorKeys = FF_COLOR_FG_RED,
         .colorTitle = FF_COLOR_FG_RED,
     },
+    // Redrose
+    {
+        .names = {"Redrose"},
+        .lines = FASTFETCH_DATATEXT_LOGO_REDROSE,
+        .colors = {
+            FF_COLOR_FG_RED,
+            FF_COLOR_FG_GREEN,
+        },
+        .colorKeys = FF_COLOR_FG_RED,
+        .colorTitle = FF_COLOR_FG_RED,
+    },
     // Refracta
     {
         .names = { "Refracta" },
@@ -5123,6 +5164,13 @@ static const FFlogo U[] = {
         },
     },
     // LAST
+    {
+        .names = { "Uzbek" },
+        .lines = FASTFETCH_DATATEXT_LOGO_UZBEK,
+        .colors = {
+            FF_COLOR_FG_GREEN,
+        },
+    },
     {},
 };
 
