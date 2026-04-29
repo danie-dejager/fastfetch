@@ -1032,17 +1032,15 @@ elseif(WIN32)
         src/common/windows/com.cpp
         src/common/windows/registry.c
         src/common/windows/unicode.c
-        src/common/windows/wmi.cpp
         src/common/windows/variant.cpp
         src/common/windows/version.c
         src/detection/battery/battery_windows.c
         src/detection/bios/bios_windows.c
         src/detection/bluetooth/bluetooth_windows.c
-        src/detection/bluetooth/bluetooth_windows.cpp
         src/detection/bluetoothradio/bluetoothradio_windows.c
         src/detection/board/board_windows.c
         src/detection/bootmgr/bootmgr_windows.c
-        src/detection/brightness/brightness_windows.cpp
+        src/detection/brightness/brightness_windows.c
         src/detection/btrfs/btrfs_nosupport.c
         src/detection/chassis/chassis_windows.c
         src/detection/cpu/cpu_windows.c
