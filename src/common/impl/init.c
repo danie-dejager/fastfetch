@@ -203,6 +203,9 @@ void ffListFeatures(void) {
 #if FF_HAVE_DCONF
         "dconf\n"
 #endif
+#if FF_HAVE_EET
+        "eet\n"
+#endif
 #if FF_HAVE_DBUS
         "dbus\n"
 #endif
@@ -253,9 +256,6 @@ void ffListFeatures(void) {
 #endif
 #if FF_HAVE_LINUX_VIDEODEV2
         "linux/videodev2\n"
-#endif
-#if FF_HAVE_LINUX_WIRELESS
-        "linux/wireless\n"
 #endif
 #if FF_HAVE_EMBEDDED_PCIIDS
         "Embedded pciids\n"

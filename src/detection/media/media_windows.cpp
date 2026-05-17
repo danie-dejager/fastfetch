@@ -2,6 +2,7 @@ extern "C" {
 #include "media.h"
 #include "common/time.h"
 #include "common/windows/unicode.h"
+#include "common/windows/com.h"
 }
 
 #if FF_HAVE_WINRT
@@ -14,10 +15,6 @@ extern "C" {
     #include <winrt/Windows.Foundation.h>
     #include <winrt/Windows.Media.Control.h>
     #include <winrt/Windows.Storage.Streams.h>
-
-    #include "common/windows/com.hpp"
-
-    #define FF_BIND_FRONT(method, pobject) std::bind_front(&std::remove_cvref_t<decltype(*(pobject))>::method, (pobject))
 
 using winrt::impl::abi_t;
 using winrt::Windows::Foundation::IAsyncOperation;
@@ -83,10 +80,10 @@ static HRESULT ffWaitForAsyncOperation(TOperationAbi* operation, TResultAbi** re
     return operation->GetResults((void**) result);
 }
 
-template <typename TResultProjection, typename TOperation, typename... TArgs>
-static HRESULT ffRunAndWait(TOperation&& operation, abi_t<TResultProjection>** result, TArgs&&... args) {
+template <typename TResultProjection, typename TOperation>
+static HRESULT ffRunAndWait(TOperation&& operation, abi_t<TResultProjection>** result) {
     abi_t<IAsyncOperation<TResultProjection>>* FF_AUTO_RELEASE_COM_OBJECT opResult = NULL;
-    HRESULT hr = operation(std::forward<TArgs>(args)..., reinterpret_cast<void**>(&opResult));
+    HRESULT hr = operation(reinterpret_cast<void**>(&opResult));
     if (FAILED(hr) || !opResult) {
         return hr;
     }
@@ -94,12 +91,12 @@ static HRESULT ffRunAndWait(TOperation&& operation, abi_t<TResultProjection>** r
     return ffWaitForAsyncOperation(opResult, result);
 }
 
-template <typename TResultProjection, typename TOperation, typename... TArgs>
-static HRESULT ffRunAndWait2(TOperation&& operation, abi_t<TResultProjection>** result, TArgs&&... args) {
+template <typename TResultProjection, typename TOperation>
+static HRESULT ffRunAndWait2(TOperation&& operation, abi_t<TResultProjection>** result) {
     *result = NULL;
 
     abi_t<IAsyncOperationWithProgress<TResultProjection, int32_t>>* FF_AUTO_RELEASE_COM_OBJECT opResult = NULL;
-    HRESULT hr = operation(std::forward<TArgs>(args)..., reinterpret_cast<void**>(&opResult));
+    HRESULT hr = operation(reinterpret_cast<void**>(&opResult));
     if (FAILED(hr) || !opResult) {
         return hr;
     }
@@ -111,7 +108,10 @@ static HRESULT ffSaveThumbnailToTempPath(
     abi_t<winrt::Windows::Storage::Streams::IRandomAccessStreamReference>* thumbnail,
     FFstrbuf* destination) {
     abi_t<winrt::Windows::Storage::Streams::IRandomAccessStreamWithContentType>* FF_AUTO_RELEASE_COM_OBJECT contentStream = NULL;
-    HRESULT hr = ffRunAndWait<winrt::Windows::Storage::Streams::IRandomAccessStreamWithContentType>(FF_BIND_FRONT(OpenReadAsync, thumbnail), &contentStream);
+    HRESULT hr = ffRunAndWait<winrt::Windows::Storage::Streams::IRandomAccessStreamWithContentType>([=](void** result) {
+        return thumbnail->OpenReadAsync(result);
+    },
+        &contentStream);
     if (FAILED(hr) || !contentStream) {
         return FAILED(hr) ? hr : E_FAIL;
     }
@@ -151,7 +151,10 @@ static HRESULT ffSaveThumbnailToTempPath(
     }
 
     abi_t<winrt::Windows::Storage::Streams::IBuffer>* FF_AUTO_RELEASE_COM_OBJECT readBuffer = NULL;
-    hr = ffRunAndWait2<winrt::Windows::Storage::Streams::IBuffer>(FF_BIND_FRONT(ReadAsync, inputStream), &readBuffer, buffer, (uint32_t) size, static_cast<uint32_t>(winrt::Windows::Storage::Streams::InputStreamOptions::None));
+    hr = ffRunAndWait2<winrt::Windows::Storage::Streams::IBuffer>([=](void** result) {
+        return inputStream->ReadAsync(buffer, (uint32_t) size, (uint32_t) winrt::Windows::Storage::Streams::InputStreamOptions::None, result);
+    },
+        &readBuffer);
     if (FAILED(hr) || !readBuffer) {
         return FAILED(hr) ? hr : E_FAIL;
     }
@@ -208,14 +211,10 @@ static HRESULT ffSaveThumbnailToTempPath(
 }
 
 static const char* getMedia(FFMediaResult* result, bool saveCover) {
-    // RO_INIT_MULTITHREADED is required for IRandomAccessStreamReference::OpenReadAsync to work correctly
-    HRESULT initHr = RoInitialize(RO_INIT_MULTITHREADED);
-    bool shouldUninitialize = SUCCEEDED(initHr);
-    if (FAILED(initHr) && initHr != RPC_E_CHANGED_MODE) {
-        return "winrt: RoInitialize() failed";
+    const char* error = ffInitCom();
+    if (error) {
+        return error;
     }
-
-    const char* error = NULL;
 
     do {
         abi_t<winrt::Windows::Media::Control::IGlobalSystemMediaTransportControlsSessionManagerStatics>* FF_AUTO_RELEASE_COM_OBJECT managerStatics = NULL;
@@ -226,22 +225,80 @@ static const char* getMedia(FFMediaResult* result, bool saveCover) {
         }
 
         abi_t<winrt::Windows::Media::Control::IGlobalSystemMediaTransportControlsSessionManager>* FF_AUTO_RELEASE_COM_OBJECT manager = NULL;
-        hr = ffRunAndWait<winrt::Windows::Media::Control::IGlobalSystemMediaTransportControlsSessionManager>(FF_BIND_FRONT(RequestAsync, managerStatics), &manager);
+        hr = ffRunAndWait<winrt::Windows::Media::Control::IGlobalSystemMediaTransportControlsSessionManager>([=](void** result) {
+            return managerStatics->RequestAsync(result);
+        },
+            &manager);
         if (FAILED(hr) || !manager) {
             error = "winrt: RequestAsync().GetResults() failed";
             break;
         }
 
-        abi_t<winrt::Windows::Media::Control::IGlobalSystemMediaTransportControlsSession>* FF_AUTO_RELEASE_COM_OBJECT session = NULL;
-        hr = manager->GetCurrentSession(reinterpret_cast<void**>(&session));
+        FF_A_CLEANUP(deleteHstring) HSTRING playerId = NULL;
 
-        if (FAILED(hr) || !session) {
-            error = "winrt: GetCurrentSession() failed";
-            break;
+        abi_t<winrt::Windows::Media::Control::IGlobalSystemMediaTransportControlsSession>* FF_AUTO_RELEASE_COM_OBJECT session = NULL;
+        if (instance.config.general.playerName.length) {
+            abi_t<winrt::Windows::Foundation::Collections::IVectorView<winrt::Windows::Media::Control::GlobalSystemMediaTransportControlsSession>>* FF_AUTO_RELEASE_COM_OBJECT sessions = NULL;
+            hr = manager->GetSessions(reinterpret_cast<void**>(&sessions));
+            if (FAILED(hr) || !sessions) {
+                error = "winrt: GetSessions() failed";
+                break;
+            }
+            uint32_t sessionCount = 0;
+            hr = sessions->get_Size(&sessionCount);
+            if (FAILED(hr)) {
+                error = "winrt: GetSessions().get_Size() failed";
+                break;
+            }
+            for (uint32_t i = 0; i < sessionCount; i++) {
+                abi_t<winrt::Windows::Media::Control::IGlobalSystemMediaTransportControlsSession>* FF_AUTO_RELEASE_COM_OBJECT currentSession = NULL;
+                hr = sessions->GetAt(i, reinterpret_cast<void**>(&currentSession));
+                if (FAILED(hr) || !currentSession) {
+                    continue;
+                }
+
+                hr = currentSession->get_SourceAppUserModelId(reinterpret_cast<void**>(&playerId));
+                if (FAILED(hr) || !playerId) {
+                    continue;
+                }
+
+                ffStrbufSetHstring(&result->playerId, playerId);
+
+                if (ffStrbufContainIgnCase(&result->playerId, &instance.config.general.playerName)) {
+                    session = currentSession;
+                    currentSession = NULL; // Don't release the session object
+                    break;
+                }
+                deleteHstring(&playerId);
+                ffStrbufClear(&result->playerId);
+            }
+
+            if (!session) {
+                error = "winrt: No media session found with the specified player name";
+                break;
+            }
+        } else {
+            hr = manager->GetCurrentSession(reinterpret_cast<void**>(&session));
+
+            if (FAILED(hr) || !session) {
+                error = "winrt: GetCurrentSession() failed";
+                break;
+            }
+
+            hr = session->get_SourceAppUserModelId(reinterpret_cast<void**>(&playerId));
+            if (FAILED(hr)) {
+                error = "winrt: get_SourceAppUserModelId() failed";
+                break;
+            }
+
+            ffStrbufSetHstring(&result->playerId, playerId);
         }
 
         abi_t<winrt::Windows::Media::Control::IGlobalSystemMediaTransportControlsSessionMediaProperties>* FF_AUTO_RELEASE_COM_OBJECT mediaProps = NULL;
-        hr = ffRunAndWait<winrt::Windows::Media::Control::IGlobalSystemMediaTransportControlsSessionMediaProperties>(FF_BIND_FRONT(TryGetMediaPropertiesAsync, session), &mediaProps);
+        hr = ffRunAndWait<winrt::Windows::Media::Control::IGlobalSystemMediaTransportControlsSessionMediaProperties>([=](void** result) {
+            return session->TryGetMediaPropertiesAsync(result);
+        },
+            &mediaProps);
         if (FAILED(hr) || !mediaProps) {
             error = "winrt: TryGetMediaPropertiesAsync().GetResults() failed";
             break;
@@ -249,9 +306,12 @@ static const char* getMedia(FFMediaResult* result, bool saveCover) {
 
         abi_t<winrt::Windows::Media::Control::IGlobalSystemMediaTransportControlsSessionPlaybackInfo>* FF_AUTO_RELEASE_COM_OBJECT playbackInfo = NULL;
         hr = session->GetPlaybackInfo(reinterpret_cast<void**>(&playbackInfo));
+        bool isPlaying = false;
+        double playbackRate = 1.0;
         if (SUCCEEDED(hr) && playbackInfo) {
             int32_t playbackStatusValue = 0;
             if (SUCCEEDED(playbackInfo->get_PlaybackStatus(&playbackStatusValue))) {
+                isPlaying = playbackStatusValue == static_cast<int32_t>(winrt::Windows::Media::Control::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing);
                 switch (static_cast<winrt::Windows::Media::Control::GlobalSystemMediaTransportControlsSessionPlaybackStatus>(playbackStatusValue)) {
     #define FF_MEDIA_SET_STATUS(status_code)                                                                       \
         case winrt::Windows::Media::Control::GlobalSystemMediaTransportControlsSessionPlaybackStatus::status_code: \
@@ -266,16 +326,14 @@ static const char* getMedia(FFMediaResult* result, bool saveCover) {
     #undef FF_MEDIA_SET_STATUS
                 }
             }
-        }
 
-        FF_A_CLEANUP(deleteHstring) HSTRING playerId = NULL;
-        hr = session->get_SourceAppUserModelId(reinterpret_cast<void**>(&playerId));
-        if (FAILED(hr)) {
-            error = "winrt: get_SourceAppUserModelId() failed";
-            break;
+            abi_t<winrt::Windows::Foundation::IReference<double>>* FF_AUTO_RELEASE_COM_OBJECT playbackRateRef = NULL;
+            if (SUCCEEDED(playbackInfo->get_PlaybackRate(reinterpret_cast<void**>(&playbackRateRef))) && playbackRateRef) {
+                if (SUCCEEDED(playbackRateRef->get_Value(&playbackRate)) && playbackRate < 0.0) {
+                    playbackRate = 0.0;
+                }
+            }
         }
-
-        ffStrbufSetHstring(&result->playerId, playerId);
 
         FF_A_CLEANUP(deleteHstring) HSTRING title = NULL;
         if (SUCCEEDED(mediaProps->get_Title(reinterpret_cast<void**>(&title)))) {
@@ -290,6 +348,29 @@ static const char* getMedia(FFMediaResult* result, bool saveCover) {
         FF_A_CLEANUP(deleteHstring) HSTRING album = NULL;
         if (SUCCEEDED(mediaProps->get_AlbumTitle(reinterpret_cast<void**>(&album)))) {
             ffStrbufSetHstring(&result->album, album);
+        }
+
+        abi_t<winrt::Windows::Media::Control::IGlobalSystemMediaTransportControlsSessionTimelineProperties>* FF_AUTO_RELEASE_COM_OBJECT timelineProps = NULL;
+        hr = session->GetTimelineProperties(reinterpret_cast<void**>(&timelineProps));
+        if (SUCCEEDED(hr) && timelineProps) {
+            int64_t duration = 0;
+            if (SUCCEEDED(timelineProps->get_EndTime(&duration)) && duration > 0) {
+                result->length = (uint32_t) (duration / 10000); // Convert from 100-nanosecond units to milliseconds
+
+                int64_t position = 0;
+                if (SUCCEEDED(timelineProps->get_Position(&position))) {
+                    result->position = (uint32_t) (position / 10000); // Convert from 100-nanosecond units to milliseconds
+
+                    int64_t lastUpdatedTime = 0;
+                    if (isPlaying && SUCCEEDED(timelineProps->get_LastUpdatedTime(&lastUpdatedTime)) && lastUpdatedTime > 0) {
+                        uint64_t lastUpdatedTimeMs = ffFileTimeToUnixMs((uint64_t) lastUpdatedTime);
+                        uint64_t nowMs = ffTimeGetNow();
+                        if (nowMs > lastUpdatedTimeMs) {
+                            result->position += (uint32_t) (((double) (nowMs - lastUpdatedTimeMs)) * playbackRate);
+                        }
+                    }
+                }
+            }
         }
 
         abi_t<winrt::Windows::ApplicationModel::IAppInfoStatics>* FF_AUTO_RELEASE_COM_OBJECT appInfoStatics = NULL;
@@ -324,10 +405,6 @@ static const char* getMedia(FFMediaResult* result, bool saveCover) {
             }
         }
     } while (false);
-
-    if (shouldUninitialize) {
-        RoUninitialize();
-    }
 
     return error;
 }

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.12.0) # target_link_libraries with OBJECT libs & project homepage url
 
 project(fastfetch
-    VERSION 2.62.1
+    VERSION 2.63.1
     LANGUAGES C
     DESCRIPTION "Fast neofetch-like system information tool"
     HOMEPAGE_URL "https://github.com/fastfetch-cli/fastfetch"
@@ -77,6 +77,7 @@ cmake_dependent_option(ENABLE_DRM "Enable libdrm" ON "LINUX OR FreeBSD OR OpenBS
 cmake_dependent_option(ENABLE_DRM_AMDGPU "Enable libdrm_amdgpu" ON "LINUX OR FreeBSD OR GNU" OFF)
 cmake_dependent_option(ENABLE_GIO "Enable gio-2.0" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR ANDROID OR SunOS OR GNU" OFF)
 cmake_dependent_option(ENABLE_DCONF "Enable dconf" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR ANDROID OR SunOS OR GNU" OFF)
+cmake_dependent_option(ENABLE_EET "Enable eet" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR ANDROID OR SunOS OR GNU" OFF)
 cmake_dependent_option(ENABLE_DBUS "Enable dbus-1" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR ANDROID OR SunOS OR Haiku OR GNU" OFF)
 cmake_dependent_option(ENABLE_SQLITE3 "Enable sqlite3" ON "LINUX OR FreeBSD OR APPLE OR OpenBSD OR NetBSD OR SunOS OR GNU" OFF)
 cmake_dependent_option(ENABLE_RPM "Enable rpm" ON "LINUX OR GNU" OFF)
@@ -1033,7 +1034,7 @@ elseif(WIN32)
         src/common/impl/debug_windows.c
         src/common/impl/kmod_windows.c
         src/common/windows/getline.c
-        src/common/windows/com.cpp
+        src/common/windows/com.c
         src/common/windows/registry.c
         src/common/windows/unicode.c
         src/common/windows/variant.cpp
@@ -1240,7 +1241,7 @@ elseif(Haiku)
         src/detection/tpm/tpm_nosupport.c
         src/detection/uptime/uptime_haiku.c
         src/detection/users/users_linux.c
-        src/detection/wallpaper/wallpaper_nosupport.c
+        src/detection/wallpaper/wallpaper_haiku.cpp
         src/detection/wifi/wifi_nosupport.c
         src/detection/wm/wm_nosupport.c
         src/detection/de/de_nosupport.c
@@ -1340,9 +1341,9 @@ if(WIN32)
     include(CheckIncludeFileCXX)
     CHECK_INCLUDE_FILE_CXX("winrt/Windows.Foundation.h" HAVE_WINRT)
     if(HAVE_WINRT)
-        message(STATUS "WinRT headers are available, media detection will use WinRT APIs")
+        message(STATUS "WinRT headers are available, media detection will be enabled")
     else()
-        message(STATUS "WinRT headers are NOT available, media detection will be disabled")
+        message(WARNING "WinRT headers are NOT available, media detection will be disabled")
     endif()
 endif()
 include(CheckFunctionExists)
@@ -1614,6 +1615,10 @@ ff_lib_enable(DCONF
     "dconf"
     "DConf"
 )
+ff_lib_enable(EET
+    "eet"
+    "Eet"
+)
 ff_lib_enable(DBUS
     "dbus-1"
     "DBus"
@@ -1759,8 +1764,7 @@ elseif(WIN32)
     endif()
     if(HAVE_WINRT)
         target_link_libraries(libfastfetch
-            PRIVATE
-            "RuntimeObject"
+            PRIVATE "runtimeobject"
         )
     endif()
 elseif(FreeBSD)
@@ -1856,12 +1860,6 @@ if(LINUX OR FreeBSD OR OpenBSD OR NetBSD)
     CHECK_INCLUDE_FILE("linux/videodev2.h" HAVE_LINUX_VIDEODEV2)
     if(HAVE_LINUX_VIDEODEV2)
         target_compile_definitions(libfastfetch PRIVATE FF_HAVE_LINUX_VIDEODEV2=1)
-    endif()
-endif()
-if(LINUX)
-    CHECK_INCLUDE_FILE("linux/wireless.h" HAVE_LINUX_WIRELESS)
-    if(HAVE_LINUX_WIRELESS)
-        target_compile_definitions(libfastfetch PRIVATE FF_HAVE_LINUX_WIRELESS=1)
     endif()
 endif()
 if(NOT WIN32)
