@@ -105,6 +105,8 @@ option(INSTALL_LICENSE "Install license into /usr/share/licenses" ON)
 option(ENABLE_EMBEDDED_PCIIDS "Embed pci.ids into fastfetch, requires `python`" OFF)
 option(ENABLE_EMBEDDED_AMDGPUIDS "Embed amdgpu.ids into fastfetch, requires `python`" OFF)
 option(ENABLE_WORDEXP "Enable using of wordexp(3) if available, instead of glob(3)" ON)
+option(ENABLE_LUA "Enable lua scripting for format strings" ON)
+option(ENABLE_QUICKJS "Enable quickjs scripting for format strings" ON)
 option(ENABLE_LIBZFS "Enable libzfs" ON)
 if(WIN32 AND NOT CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
     option(ENABLE_WIN81_COMPAT "Enable legacy Windows compatibility (Windows 8.1 and later; Windows 7 unsupported)" ON)
@@ -1555,9 +1557,43 @@ function(ff_lib_enable VARNAME PKGCONFIG_NAMES CMAKE_NAME)
         find_package(${CMAKE_NAME} QUIET)
 
         set(${VARNAME}_FOUND ${${CMAKE_NAME}_FOUND})
-        set(${VARNAME}_INCLUDE_DIRS ${${CMAKE_NAME}_INCLUDE_DIRS})
-        set(${VARNAME}_LIBRARIES ${${CMAKE_NAME}_LIBRARIES})
-        set(${VARNAME}_CFLAGS_OTHER ${${CMAKE_NAME}_CFLAGS_OTHER})
+        if(${VARNAME} STREQUAL "LUA")
+            # Lua is a special case since its CMake config does not follow the usual pattern
+            set(${VARNAME}_INCLUDE_DIRS ${LUA_INCLUDE_DIR})
+            set(${VARNAME}_LIBRARIES ${LUA_LIBRARY})
+            set(${VARNAME}_CFLAGS_OTHER "")
+        else()
+            set(${VARNAME}_INCLUDE_DIRS ${${CMAKE_NAME}_INCLUDE_DIRS})
+            set(${VARNAME}_LIBRARIES ${${CMAKE_NAME}_LIBRARIES})
+            set(${VARNAME}_CFLAGS_OTHER ${${CMAKE_NAME}_CFLAGS_OTHER})
+
+            # Some CMake packages (e.g. quickjs) are target-based only and
+            # don't expose *_INCLUDE_DIRS/*_LIBRARIES variables.
+            set(_FF_CMAKE_TARGET "")
+            if(TARGET ${CMAKE_NAME}::${CMAKE_NAME})
+                set(_FF_CMAKE_TARGET ${CMAKE_NAME}::${CMAKE_NAME})
+            elseif(TARGET ${CMAKE_NAME})
+                set(_FF_CMAKE_TARGET ${CMAKE_NAME})
+            endif()
+
+            if(NOT _FF_CMAKE_TARGET STREQUAL "")
+                if(NOT DEFINED ${VARNAME}_INCLUDE_DIRS OR "${${VARNAME}_INCLUDE_DIRS}" STREQUAL "")
+                    get_target_property(_FF_CMAKE_TARGET_INCLUDES ${_FF_CMAKE_TARGET} INTERFACE_INCLUDE_DIRECTORIES)
+                    if(_FF_CMAKE_TARGET_INCLUDES)
+                        set(${VARNAME}_INCLUDE_DIRS ${_FF_CMAKE_TARGET_INCLUDES})
+                    endif()
+                endif()
+
+                if(NOT DEFINED ${VARNAME}_LIBRARIES OR "${${VARNAME}_LIBRARIES}" STREQUAL "")
+                    get_target_property(_FF_CMAKE_TARGET_LIBRARIES ${_FF_CMAKE_TARGET} INTERFACE_LINK_LIBRARIES)
+                    if(_FF_CMAKE_TARGET_LIBRARIES)
+                        set(${VARNAME}_LIBRARIES ${_FF_CMAKE_TARGET_LIBRARIES})
+                    else()
+                        set(${VARNAME}_LIBRARIES ${_FF_CMAKE_TARGET})
+                    endif()
+                endif()
+            endif()
+        endif()
     endif()
 
     if(NOT ${VARNAME}_FOUND)
@@ -1682,7 +1718,15 @@ ff_lib_enable(ELF
     "libelf"
     "libelf"
 )
-
+ff_lib_enable(LUA
+    "lua"
+    "Lua"
+)
+# Requires https://github.com/quickjs-ng/quickjs/pull/1479
+ff_lib_enable(QUICKJS
+    "quickjs"
+    "quickjs"
+)
 if(ENABLE_THREADS)
     target_compile_definitions(libfastfetch PRIVATE FF_HAVE_THREADS=1)
     if(CMAKE_USE_PTHREADS_INIT) #Threads::Threads is not set for WIN32
