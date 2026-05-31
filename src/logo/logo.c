@@ -3,7 +3,7 @@
 #include "common/printing.h"
 #include "common/processing.h"
 #include "common/textModifier.h"
-#include "common/stringUtils.h"
+#include "common/strutil.h"
 #include "detection/media/media.h"
 #include "detection/os/os.h"
 #include "detection/terminalshell/terminalshell.h"
@@ -139,22 +139,9 @@ static void logoLineCacheBuild(FFLogoLineCacheState* cache, const char* data, bo
                     }
                 }
 
-                ++lineWidth;
-
-                int codepoint = (unsigned char) *data;
-                uint8_t bytes;
-
-                if (codepoint <= 127) {
-                    bytes = 1;
-                } else if ((codepoint & 0xE0) == 0xC0) {
-                    bytes = 2;
-                } else if ((codepoint & 0xF0) == 0xE0) {
-                    bytes = 3;
-                } else if ((codepoint & 0xF8) == 0xF0) {
-                    bytes = 4;
-                } else {
-                    bytes = 1;
-                }
+                uint8_t charWidth;
+                uint8_t bytes = ffUtf8CharLenWidth(data, UINT32_MAX, &charWidth);
+                lineWidth += charWidth;
 
                 for (uint8_t i = 0; i < bytes; ++i) {
                     if (*data == '\0') {
@@ -449,7 +436,7 @@ static bool logoPrintBuiltinIfExists(const FFstrbuf* name, FFLogoSize size) {
     return true;
 }
 
-static inline void logoPrintDetected(FFLogoSize size) {
+void ffLogoPrintDetected(FFLogoSize size) {
     logoPrintStruct(logoGetBuiltinDetected(size));
 }
 
@@ -474,6 +461,7 @@ static bool updateLogoPath(void) {
         return true;
     }
 
+    #if !FF_MODULE_DISABLE_MEDIA
     if (ffStrbufIgnCaseEqualS(&options->source, "media-cover")) {
         const FFMediaResult* media = ffDetectMedia(true);
         if (media->cover.length == 0) {
@@ -482,6 +470,7 @@ static bool updateLogoPath(void) {
         ffStrbufSet(&options->source, &media->cover);
         return true;
     }
+    #endif
 
     FF_STRBUF_AUTO_DESTROY fullPath = ffStrbufCreateA(128);
     if (ffPathExpandEnv(options->source.chars, &fullPath) && ffPathExists(fullPath.chars, FF_PATHTYPE_FILE)) {
@@ -617,7 +606,7 @@ void ffLogoPrint(void) {
 
     // If the source is not set, we can directly print the detected logo.
     if (options->source.length == 0) {
-        logoPrintDetected(options->type == FF_LOGO_TYPE_SMALL ? FF_LOGO_SIZE_SMALL : FF_LOGO_SIZE_NORMAL);
+        ffLogoPrintDetected(options->type == FF_LOGO_TYPE_SMALL ? FF_LOGO_SIZE_SMALL : FF_LOGO_SIZE_NORMAL);
         return;
     }
 
@@ -631,7 +620,7 @@ void ffLogoPrint(void) {
                 }
             }
 
-            logoPrintDetected(FF_LOGO_SIZE_UNKNOWN);
+            ffLogoPrintDetected(FF_LOGO_SIZE_UNKNOWN);
         }
         return;
     }
@@ -650,6 +639,7 @@ void ffLogoPrint(void) {
         }
 
         if (!ffStrbufEndsWithIgnCaseS(&options->source, ".txt")) {
+            #if !FF_MODULE_DISABLE_TERMINAL
             const FFTerminalResult* terminal = ffDetectTerminal();
 
             bool supportsIterm2 = ffStrbufEqualS(&terminal->prettyName, "iTerm");
@@ -671,6 +661,9 @@ void ffLogoPrint(void) {
                 ffStrbufIgnCaseEqualS(&terminal->processName, "warp") ||
 #endif
                 false;
+            #else
+            bool supportsKitty = false;
+            #endif
 
             // Try to load the logo as an image. If it succeeds, print it and return.
             if (logoPrintImageIfExists(supportsKitty ? FF_LOGO_TYPE_IMAGE_KITTY : FF_LOGO_TYPE_IMAGE_CHAFA, false)) {
@@ -688,7 +681,7 @@ void ffLogoPrint(void) {
         }
     }
 
-    logoPrintDetected(FF_LOGO_SIZE_UNKNOWN);
+    ffLogoPrintDetected(FF_LOGO_SIZE_UNKNOWN);
 }
 
 void ffLogoPrintLine(void) {

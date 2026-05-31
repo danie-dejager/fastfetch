@@ -3,7 +3,7 @@
 #include "common/parsing.h"
 #include "common/processing.h"
 #include "common/thread.h"
-#include "common/stringUtils.h"
+#include "common/strutil.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -280,14 +280,7 @@ static void getUserShellFromEnv(FFShellResult* result) {
     }
 }
 
-bool fftsGetShellVersion(FFstrbuf* exe, const char* exeName, FFstrbuf* version);
-
-bool fftsGetTerminalVersion(FFstrbuf* processName, FFstrbuf* exe, FFstrbuf* version);
-
 static void setShellInfoDetails(FFShellResult* result) {
-    ffStrbufClear(&result->version);
-    fftsGetShellVersion(result->exePath.length > 0 ? &result->exePath : &result->exe, result->exeName, &result->version);
-
     if (ffStrbufEqualS(&result->processName, "pwsh")) {
         ffStrbufInitStatic(&result->prettyName, "PowerShell");
     } else if (ffStrbufEqualS(&result->processName, "nu")) {
@@ -301,11 +294,13 @@ static void setShellInfoDetails(FFShellResult* result) {
 }
 
 static void setTerminalInfoDetails(FFTerminalResult* result) {
-    if (ffStrbufStartsWithC(&result->processName, '.') && ffStrbufContainS(&result->processName, "-wrap")) {
-        // For NixOS. Ref: #510 and https://github.com/NixOS/nixpkgs/pull/249428
-        // We use processName when detecting version and font, overriding it for simplification
-        ffStrbufSubstrBeforeLastC(&result->processName, '-');
+    // For Nixpkgs. Ref: #510 and https://github.com/NixOS/nixpkgs/pull/249428
+    // We use processName when detecting version and font, overriding it for simplification
+    if (ffStrbufStartsWithC(&result->processName, '.') && ffStrbufStartsWithS(&result->exePath,"/nix/store")) {
         ffStrbufSubstrAfter(&result->processName, 0);
+        if (strlen(result->exeName) < 15) {
+            ffStrbufSubstrBeforeLastC(&result->processName, '-');
+        }
     }
 
     if (ffStrbufEqualS(&result->processName, "wezterm-gui")) {
@@ -364,13 +359,11 @@ static void setTerminalInfoDetails(FFTerminalResult* result) {
 
 #endif
 
-    else if (strncmp(result->exeName, result->processName.chars, result->processName.length) == 0) { // if exeName starts with processName, print it. Otherwise print processName
+    else if (strncmp(result->exeName, result->processName.chars, result->processName.length) == 0 || (ffStrbufStartsWithS(&result->exePath,"/nix/store") && strlen(result->exeName) > 15)) { // if exeName starts with processName, print it. Otherwise print processName. For nixpkgs, use exeName if processName can't be unwrapped
         ffStrbufInitS(&result->prettyName, result->exeName);
     } else {
         ffStrbufInitCopy(&result->prettyName, &result->processName);
     }
-
-    fftsGetTerminalVersion(&result->processName, result->exePath.length > 0 ? &result->exePath : &result->exe, &result->version);
 }
 
 #if defined(MAXPATH)
@@ -408,7 +401,13 @@ const FFShellResult* ffDetectShell() {
 
     ppid = getShellInfo(&result, ppid);
     getUserShellFromEnv(&result);
-    setShellInfoDetails(&result);
+
+    if (result.processName.length > 0) {
+        setShellInfoDetails(&result);
+        if (instance.config.general.detectVersion) {
+            fftsGetShellVersion(result.exePath.length > 0 ? &result.exePath : &result.exe, result.exeName, &result.version);
+        }
+    }
 
     return &result;
 }
@@ -436,7 +435,13 @@ const FFTerminalResult* ffDetectTerminal() {
         ppid = getTerminalInfo(&result, ppid);
     }
     getTerminalFromEnv(&result);
-    setTerminalInfoDetails(&result);
+
+    if (result.processName.length > 0) {
+        setTerminalInfoDetails(&result);
+        if (instance.config.general.detectVersion) {
+            fftsGetTerminalVersion(&result.processName, result.exePath.length > 0 ? &result.exePath : &result.exe, &result.version);
+        }
+    }
 
     return &result;
 }
