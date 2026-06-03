@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.12.0) # target_link_libraries with OBJECT libs & project homepage url
 
 project(fastfetch
-    VERSION 2.63.1
+    VERSION 2.64.0
     LANGUAGES C
     DESCRIPTION "Fast neofetch-like system information tool"
     HOMEPAGE_URL "https://github.com/fastfetch-cli/fastfetch"
@@ -74,6 +74,8 @@ cmake_dependent_option(ENABLE_WAYLAND "Enable wayland-client" ON "LINUX OR FreeB
 cmake_dependent_option(ENABLE_XCB_RANDR "Enable xcb-randr" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR ANDROID OR SunOS OR GNU" OFF)
 cmake_dependent_option(ENABLE_XRANDR "Enable xrandr" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR ANDROID OR SunOS OR GNU" OFF)
 cmake_dependent_option(ENABLE_DRM "Enable libdrm" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR SunOS OR GNU" OFF)
+cmake_dependent_option(ENABLE_VA "Enable libva" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR SunOS OR GNU" OFF)
+cmake_dependent_option(ENABLE_VDPAU "Enable vdpau" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR SunOS OR GNU" OFF)
 cmake_dependent_option(ENABLE_DRM_AMDGPU "Enable libdrm_amdgpu" ON "LINUX OR FreeBSD OR GNU" OFF)
 cmake_dependent_option(ENABLE_GIO "Enable gio-2.0" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR ANDROID OR SunOS OR GNU" OFF)
 cmake_dependent_option(ENABLE_DCONF "Enable dconf" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR ANDROID OR SunOS OR GNU" OFF)
@@ -400,6 +402,7 @@ set(LIBFASTFETCH_SRC
     src/common/impl/init.c
     src/common/impl/jsonconfig.c
     src/common/impl/library.c
+    src/common/impl/lua.c
     src/common/impl/netif.c
     src/common/impl/networking_common.c
     src/common/impl/option.c
@@ -418,9 +421,12 @@ set(LIBFASTFETCH_SRC
     src/common/impl/path.c
     src/common/impl/FFPlatform.c
     src/common/impl/smbios.c
+    src/common/impl/strutil.c
     src/detection/bluetoothradio/bluetoothradio.c
     src/detection/bootmgr/bootmgr.c
     src/detection/chassis/chassis.c
+    src/detection/codec/codec.c
+    src/detection/codec/codec_vulkan.c
     src/detection/cpu/cpu.c
     src/detection/cpuusage/cpuusage.c
     src/detection/command/command.c
@@ -462,6 +468,7 @@ set(LIBFASTFETCH_SRC
     src/modules/btrfs/btrfs.c
     src/modules/camera/camera.c
     src/modules/chassis/chassis.c
+    src/modules/codec/codec.c
     src/modules/colors/colors.c
     src/modules/cpu/cpu.c
     src/modules/cpucache/cpucache.c
@@ -548,6 +555,7 @@ if(LINUX)
         src/detection/brightness/brightness_linux.c
         src/detection/btrfs/btrfs_linux.c
         src/detection/chassis/chassis_linux.c
+        src/detection/codec/codec_linux.c
         src/detection/cpu/cpu_linux.c
         src/detection/cpucache/cpucache_linux.c
         src/detection/cpuusage/cpuusage_linux.c
@@ -635,6 +643,7 @@ elseif(ANDROID)
         src/detection/brightness/brightness_nosupport.c
         src/detection/btrfs/btrfs_nosupport.c
         src/detection/chassis/chassis_nosupport.c
+        src/detection/codec/codec_android.c
         src/detection/cpu/cpu_linux.c
         src/detection/cpucache/cpucache_linux.c
         src/detection/cursor/cursor_linux.c
@@ -709,6 +718,7 @@ elseif(FreeBSD)
         src/detection/brightness/brightness_bsd.c
         src/detection/btrfs/btrfs_nosupport.c
         src/detection/chassis/chassis_bsd.c
+        src/detection/codec/codec_linux.c
         src/detection/cpu/cpu_bsd.c
         src/detection/cpucache/cpucache_shared.c
         src/detection/cpuusage/cpuusage_bsd.c
@@ -803,6 +813,7 @@ elseif(NetBSD)
         src/detection/brightness/brightness_nbsd.c
         src/detection/btrfs/btrfs_nosupport.c
         src/detection/chassis/chassis_nbsd.c
+        src/detection/codec/codec_linux.c
         src/detection/cpu/cpu_nbsd.c
         src/detection/cpucache/cpucache_shared.c
         src/detection/cpuusage/cpuusage_bsd.c
@@ -887,6 +898,7 @@ elseif(OpenBSD)
         src/detection/brightness/brightness_obsd.c
         src/detection/btrfs/btrfs_nosupport.c
         src/detection/chassis/chassis_windows.c
+        src/detection/codec/codec_linux.c
         src/detection/cpu/cpu_obsd.c
         src/detection/cpucache/cpucache_shared.c
         src/detection/cpuusage/cpuusage_bsd.c
@@ -970,6 +982,7 @@ elseif(APPLE)
         src/detection/bootmgr/bootmgr_apple.c
         src/detection/brightness/brightness_apple.c
         src/detection/btrfs/btrfs_nosupport.c
+        src/detection/codec/codec_apple.c
         src/detection/cpu/cpu_apple.c
         src/detection/cpucache/cpucache_apple.c
         src/detection/cpuusage/cpuusage_apple.c
@@ -1060,6 +1073,7 @@ elseif(WIN32)
         src/detection/brightness/brightness_windows.c
         src/detection/btrfs/btrfs_nosupport.c
         src/detection/chassis/chassis_windows.c
+        src/detection/codec/codec_windows.cpp
         src/detection/cpu/cpu_windows.c
         src/detection/cpucache/cpucache_windows.c
         src/detection/cpuusage/cpuusage_windows.c
@@ -1131,6 +1145,7 @@ elseif(SunOS)
         src/detection/cursor/cursor_linux.c
         src/detection/bluetooth/bluetooth_nosupport.c
         src/detection/bluetoothradio/bluetoothradio_nosupport.c
+        src/detection/codec/codec_linux.c
         src/detection/disk/disk_sunos.c
         src/detection/dns/dns_linux.c
         src/detection/physicaldisk/physicaldisk_sunos.c
@@ -1214,6 +1229,7 @@ elseif(Haiku)
         src/detection/cursor/cursor_nosupport.c
         src/detection/bluetooth/bluetooth_haiku.cpp
         src/detection/bluetoothradio/bluetoothradio_nosupport.c
+        src/detection/codec/codec_linux.c
         src/detection/disk/disk_haiku.cpp
         src/detection/dns/dns_linux.c
         src/detection/physicaldisk/physicaldisk_haiku.c
@@ -1283,6 +1299,7 @@ elseif(GNU)
         src/detection/cursor/cursor_linux.c
         src/detection/bluetooth/bluetooth_linux.c
         src/detection/bluetoothradio/bluetoothradio_linux.c
+        src/detection/codec/codec_linux.c
         src/detection/disk/disk_linux.c
         src/detection/dns/dns_linux.c
         src/detection/physicaldisk/physicaldisk_nosupport.c
@@ -1654,6 +1671,14 @@ ff_lib_enable(DRM
     "libdrm"
     "Libdrm"
 )
+ff_lib_enable(VA
+    "libva"
+    "Libva"
+)
+ff_lib_enable(VDPAU
+    "vdpau"
+    "vdpau"
+)
 ff_lib_enable(DRM_AMDGPU
     "libdrm_amdgpu"
     "Libdrm_Amdgpu"
@@ -1787,10 +1812,10 @@ if(ENABLE_LIBZFS)
     endif()
 endif()
 if(ENABLE_WCWIDTH)
-    target_compile_definitions(libfastfetch PRIVATE FF_ENABLE_WCWIDTH=1)
+    target_compile_definitions(libfastfetch PUBLIC FF_ENABLE_WCWIDTH=1)
 endif()
 if(NOT HAVE_MEMRCHR)
-    target_compile_definitions(libfastfetch PRIVATE FF_HAVE_CUSTOM_MEMRCHR=1)
+    target_compile_definitions(libfastfetch PUBLIC FF_HAVE_CUSTOM_MEMRCHR=1)
 endif()
 
 if(LINUX)
@@ -1820,6 +1845,7 @@ elseif(APPLE)
         PRIVATE "-framework OpenGL"
         PRIVATE "-framework OpenCL"
         PRIVATE "-framework SystemConfiguration"
+        PRIVATE "-framework VideoToolbox"
         PRIVATE "-weak_framework CoreDisplay"
 
         PRIVATE "-F /System/Library/PrivateFrameworks"

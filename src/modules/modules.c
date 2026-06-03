@@ -47,6 +47,9 @@ static FFModuleBaseInfo* C[] = {
 #if !FF_MODULE_DISABLE_CHASSIS
     &ffChassisModuleInfo,
 #endif
+#if !FF_MODULE_DISABLE_CODEC
+    &ffCodecModuleInfo,
+#endif
 #if !FF_MODULE_DISABLE_COMMAND
     &ffCommandModuleInfo,
 #endif
