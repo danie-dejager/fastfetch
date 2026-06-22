@@ -63,6 +63,13 @@ endif()
 
 include(CheckIncludeFile)
 
+if(LINUX)
+    CHECK_INCLUDE_FILE("linux/version.h" HAVE_LINUX_VERSION_H)
+    if(NOT HAVE_LINUX_VERSION_H)
+        message(FATAL_ERROR "Linux headers (linux/version.h) not found! Please install linux-headers package.")
+    endif()
+endif()
+
 #####################
 # Configure options #
 #####################
@@ -70,13 +77,12 @@ include(CheckIncludeFile)
 include(CMakeDependentOption)
 
 cmake_dependent_option(ENABLE_VULKAN "Enable vulkan" ON "LINUX OR APPLE OR FreeBSD OR OpenBSD OR NetBSD OR WIN32 OR ANDROID OR SunOS OR Haiku OR GNU" OFF)
-cmake_dependent_option(ENABLE_WAYLAND "Enable wayland-client" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR GNU" OFF)
+cmake_dependent_option(ENABLE_WAYLAND "Enable wayland-client" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD" OFF)
 cmake_dependent_option(ENABLE_XCB_RANDR "Enable xcb-randr" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR ANDROID OR SunOS OR GNU" OFF)
 cmake_dependent_option(ENABLE_XRANDR "Enable xrandr" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR ANDROID OR SunOS OR GNU" OFF)
 cmake_dependent_option(ENABLE_DRM "Enable libdrm" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR SunOS OR GNU" OFF)
 cmake_dependent_option(ENABLE_VA "Enable libva" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR SunOS OR GNU" OFF)
 cmake_dependent_option(ENABLE_VDPAU "Enable vdpau" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR SunOS OR GNU" OFF)
-cmake_dependent_option(ENABLE_DRM_AMDGPU "Enable libdrm_amdgpu" ON "LINUX OR FreeBSD OR GNU" OFF)
 cmake_dependent_option(ENABLE_GIO "Enable gio-2.0" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR ANDROID OR SunOS OR GNU" OFF)
 cmake_dependent_option(ENABLE_DCONF "Enable dconf" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR ANDROID OR SunOS OR GNU" OFF)
 cmake_dependent_option(ENABLE_EET "Enable eet" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR ANDROID OR SunOS OR GNU" OFF)
@@ -134,25 +140,10 @@ if(NOT BINARY_LINK_TYPE IN_LIST BINARY_LINK_TYPE_OPTIONS)
     message(FATAL_ERROR "BINARY_LINK_TYPE must be one of ${BINARY_LINK_TYPE_OPTIONS}")
 endif()
 
-set(PACKAGE_MANAGERS
-    AM APK APPIMAGE
-    BREW
-    CARDS CHOCO
-    DPKG
-    EMERGE EOPKG
-    FLATPAK
-    GUIX
-    HPKG
-    KISS
-    LINGLONG LPKG LPKGBUILD
-    MACPORTS MOSS MPORT
-    NIX
-    OPKG
-    PACMAN PACSTALL PALUDIS PISI PKG PKGSRC PKGTOOL
-    RPM
-    SCOOP SNAP SOAR SORCERY
-    WINGET
-    XBPS)
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/src/modules/packages/option.h" PACKAGE_MANAGERS)
+string(REGEX MATCHALL "FF_PACKAGES_FLAG_[A-Z]+_BIT" PACKAGE_MANAGERS "${PACKAGE_MANAGERS}")
+string(REGEX REPLACE "FF_PACKAGES_FLAG_([A-Z]+)_BIT" "\\1" PACKAGE_MANAGERS "${PACKAGE_MANAGERS}")
+list(SORT PACKAGE_MANAGERS)
 foreach(package_manager ${PACKAGE_MANAGERS})
     if(package_manager STREQUAL "WINGET")
         option(PACKAGES_DISABLE_${package_manager} "Disable ${package_manager} package manager detection by default" ON)
@@ -327,7 +318,7 @@ if(Python_FOUND)
     endif()
 else()
     message(WARNING "Python3 is not found, 'help.json' will not be minified")
-    file(READ "doc/help.json" DATATEXT_JSON_HELP)
+    file(READ "${CMAKE_CURRENT_SOURCE_DIR}/doc/help.json" DATATEXT_JSON_HELP)
 endif()
 
 if(ENABLE_EMBEDDED_PCIIDS AND NOT EXISTS "${PROJECT_BINARY_DIR}/fastfetch_pciids.c.inc")
@@ -592,11 +583,10 @@ if(LINUX)
         src/detection/displayserver/linux/drm.c
         src/detection/displayserver/linux/wayland/wayland.c
         src/detection/displayserver/linux/wayland/global-output.c
-        src/detection/displayserver/linux/wayland/zwlr-output.c
+        src/detection/displayserver/linux/wayland/wl-output-protocol.c
+        src/detection/displayserver/linux/wayland/wp-color-management-v1-protocol.c
         src/detection/displayserver/linux/wayland/kde-output.c
-        src/detection/displayserver/linux/wayland/wlr-output-management-unstable-v1-protocol.c
         src/detection/displayserver/linux/wayland/kde-output-device-v2-protocol.c
-        src/detection/displayserver/linux/wayland/kde-output-order-v1-protocol.c
         src/detection/displayserver/linux/wayland/xdg-output-unstable-v1-protocol.c
         src/detection/displayserver/linux/wmde.c
         src/detection/displayserver/linux/xcb.c
@@ -753,11 +743,10 @@ elseif(FreeBSD)
         src/detection/displayserver/linux/drm.c
         src/detection/displayserver/linux/wayland/wayland.c
         src/detection/displayserver/linux/wayland/global-output.c
-        src/detection/displayserver/linux/wayland/zwlr-output.c
         src/detection/displayserver/linux/wayland/kde-output.c
-        src/detection/displayserver/linux/wayland/wlr-output-management-unstable-v1-protocol.c
+        src/detection/displayserver/linux/wayland/wl-output-protocol.c
+        src/detection/displayserver/linux/wayland/wp-color-management-v1-protocol.c
         src/detection/displayserver/linux/wayland/kde-output-device-v2-protocol.c
-        src/detection/displayserver/linux/wayland/kde-output-order-v1-protocol.c
         src/detection/displayserver/linux/wayland/xdg-output-unstable-v1-protocol.c
         src/detection/displayserver/linux/wmde.c
         src/detection/displayserver/linux/xcb.c
@@ -766,6 +755,7 @@ elseif(FreeBSD)
         src/detection/gpu/gpu_bsd.c
         src/detection/gpu/gpu_drm.c
         src/detection/gpu/gpu_pci.c
+        src/detection/gpu/gpu_bsddrm.c
         src/detection/gtk_qt/gtk.c
         src/detection/host/host_bsd.c
         src/detection/lm/lm_linux.c
@@ -848,11 +838,10 @@ elseif(NetBSD)
         src/detection/displayserver/linux/drm.c
         src/detection/displayserver/linux/wayland/wayland.c
         src/detection/displayserver/linux/wayland/global-output.c
-        src/detection/displayserver/linux/wayland/zwlr-output.c
         src/detection/displayserver/linux/wayland/kde-output.c
-        src/detection/displayserver/linux/wayland/wlr-output-management-unstable-v1-protocol.c
+        src/detection/displayserver/linux/wayland/wl-output-protocol.c
+        src/detection/displayserver/linux/wayland/wp-color-management-v1-protocol.c
         src/detection/displayserver/linux/wayland/kde-output-device-v2-protocol.c
-        src/detection/displayserver/linux/wayland/kde-output-order-v1-protocol.c
         src/detection/displayserver/linux/wayland/xdg-output-unstable-v1-protocol.c
         src/detection/displayserver/linux/wmde.c
         src/detection/displayserver/linux/xcb.c
@@ -933,11 +922,10 @@ elseif(OpenBSD)
         src/detection/displayserver/linux/drm.c
         src/detection/displayserver/linux/wayland/wayland.c
         src/detection/displayserver/linux/wayland/global-output.c
-        src/detection/displayserver/linux/wayland/zwlr-output.c
         src/detection/displayserver/linux/wayland/kde-output.c
-        src/detection/displayserver/linux/wayland/wlr-output-management-unstable-v1-protocol.c
+        src/detection/displayserver/linux/wayland/wl-output-protocol.c
+        src/detection/displayserver/linux/wayland/wp-color-management-v1-protocol.c
         src/detection/displayserver/linux/wayland/kde-output-device-v2-protocol.c
-        src/detection/displayserver/linux/wayland/kde-output-order-v1-protocol.c
         src/detection/displayserver/linux/wayland/xdg-output-unstable-v1-protocol.c
         src/detection/displayserver/linux/wmde.c
         src/detection/displayserver/linux/xcb.c
@@ -945,6 +933,8 @@ elseif(OpenBSD)
         src/detection/font/font_linux.c
         src/detection/gpu/gpu_pci.c
         src/detection/gpu/gpu_obsd.c
+        src/detection/gpu/gpu_drm.c
+        src/detection/gpu/gpu_bsddrm.c
         src/detection/gtk_qt/gtk.c
         src/detection/host/host_obsd.c
         src/detection/lm/lm_nosupport.c
@@ -1176,11 +1166,10 @@ elseif(SunOS)
         src/detection/displayserver/linux/drm.c
         src/detection/displayserver/linux/wayland/wayland.c
         src/detection/displayserver/linux/wayland/global-output.c
-        src/detection/displayserver/linux/wayland/zwlr-output.c
         src/detection/displayserver/linux/wayland/kde-output.c
-        src/detection/displayserver/linux/wayland/wlr-output-management-unstable-v1-protocol.c
+        src/detection/displayserver/linux/wayland/wl-output-protocol.c
+        src/detection/displayserver/linux/wayland/wp-color-management-v1-protocol.c
         src/detection/displayserver/linux/wayland/kde-output-device-v2-protocol.c
-        src/detection/displayserver/linux/wayland/kde-output-order-v1-protocol.c
         src/detection/displayserver/linux/wayland/xdg-output-unstable-v1-protocol.c
         src/detection/displayserver/linux/wmde.c
         src/detection/displayserver/linux/xcb.c
@@ -1326,12 +1315,9 @@ elseif(GNU)
         src/detection/physicalmemory/physicalmemory_nosupport.c
         src/detection/diskio/diskio_nosupport.c
         src/detection/displayserver/linux/displayserver_linux.c
+        src/detection/displayserver/linux/wayland/wayland.c
         src/detection/displayserver/linux/common.c
         src/detection/displayserver/linux/drm.c
-        src/detection/displayserver/linux/wayland/wayland.c
-        src/detection/displayserver/linux/wayland/global-output.c
-        src/detection/displayserver/linux/wayland/zwlr-output.c
-        src/detection/displayserver/linux/wayland/wlr-output-management-unstable-v1-protocol.c
         src/detection/displayserver/linux/wmde.c
         src/detection/displayserver/linux/xcb.c
         src/detection/displayserver/linux/xlib.c
@@ -1703,10 +1689,6 @@ ff_lib_enable(VA
 ff_lib_enable(VDPAU
     "vdpau"
     "vdpau"
-)
-ff_lib_enable(DRM_AMDGPU
-    "libdrm_amdgpu"
-    "Libdrm_Amdgpu"
 )
 ff_lib_enable(GIO
     "gio-2.0"
