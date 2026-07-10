@@ -77,7 +77,7 @@ static const char* detectByPci(const FFGPUOptions* options, FFlist* gpus) {
             }
         }
 
-        ffGPUFillVendorByDeviceName(gpu);
+        ffGPUDetectTypeByVendorAndName(gpu);
     }
 
     return NULL;

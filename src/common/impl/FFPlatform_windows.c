@@ -236,54 +236,38 @@ static void getSystemPageSize(FFPlatformSysinfo* info) {
 }
 
 static void getSystemArchitecture(FFPlatformSysinfo* info) {
-    SYSTEM_PROCESSOR_INFORMATION spi;
-    if (NT_SUCCESS(NtQuerySystemInformation(SystemProcessorInformation, &spi, sizeof(spi), NULL))) {
-        switch (spi.ProcessorArchitecture) {
-            case PROCESSOR_ARCHITECTURE_AMD64:
-                ffStrbufSetStatic(&info->architecture, "x86_64");
-                break;
-            case PROCESSOR_ARCHITECTURE_IA64:
-                ffStrbufSetStatic(&info->architecture, "ia64");
-                break;
-            case PROCESSOR_ARCHITECTURE_INTEL:
-                switch (spi.ProcessorLevel) {
-                    case 4:
-                        ffStrbufSetStatic(&info->architecture, "i486");
-                        break;
-                    case 5:
-                        ffStrbufSetStatic(&info->architecture, "i586");
-                        break;
-                    case 6:
-                        ffStrbufSetStatic(&info->architecture, "i686");
-                        break;
-                    default:
-                        ffStrbufSetStatic(&info->architecture, "i386");
-                        break;
-                }
-                break;
-            case PROCESSOR_ARCHITECTURE_ARM64:
-                ffStrbufSetStatic(&info->architecture, "aarch64");
-                break;
-            case PROCESSOR_ARCHITECTURE_ARM:
-                ffStrbufSetStatic(&info->architecture, "arm");
-                break;
-            case PROCESSOR_ARCHITECTURE_PPC:
-                ffStrbufSetStatic(&info->architecture, "ppc");
-                break;
-            case PROCESSOR_ARCHITECTURE_MIPS:
-                ffStrbufSetStatic(&info->architecture, "mips");
-                break;
-            case PROCESSOR_ARCHITECTURE_ALPHA:
-                ffStrbufSetStatic(&info->architecture, "alpha");
-                break;
-            case PROCESSOR_ARCHITECTURE_ALPHA64:
-                ffStrbufSetStatic(&info->architecture, "alpha64");
-                break;
-            case PROCESSOR_ARCHITECTURE_UNKNOWN:
-            default:
-                ffStrbufSetStatic(&info->architecture, "unknown");
-                break;
-        }
+    switch (SharedUserData->NativeProcessorArchitecture) {
+        case PROCESSOR_ARCHITECTURE_AMD64:
+            ffStrbufSetStatic(&info->architecture, "x86_64");
+            break;
+        case PROCESSOR_ARCHITECTURE_IA64:
+            ffStrbufSetStatic(&info->architecture, "ia64");
+            break;
+        case PROCESSOR_ARCHITECTURE_INTEL:
+            ffStrbufSetStatic(&info->architecture, "i686");
+            break;
+        case PROCESSOR_ARCHITECTURE_ARM64:
+            ffStrbufSetStatic(&info->architecture, "aarch64");
+            break;
+        case PROCESSOR_ARCHITECTURE_ARM:
+            ffStrbufSetStatic(&info->architecture, "arm");
+            break;
+        case PROCESSOR_ARCHITECTURE_PPC:
+            ffStrbufSetStatic(&info->architecture, "ppc");
+            break;
+        case PROCESSOR_ARCHITECTURE_MIPS:
+            ffStrbufSetStatic(&info->architecture, "mips");
+            break;
+        case PROCESSOR_ARCHITECTURE_ALPHA:
+            ffStrbufSetStatic(&info->architecture, "alpha");
+            break;
+        case PROCESSOR_ARCHITECTURE_ALPHA64:
+            ffStrbufSetStatic(&info->architecture, "alpha64");
+            break;
+        case PROCESSOR_ARCHITECTURE_UNKNOWN:
+        default:
+            ffStrbufSetStatic(&info->architecture, "unknown");
+            break;
     }
 }
 

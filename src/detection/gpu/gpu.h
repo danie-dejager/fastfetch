@@ -64,6 +64,9 @@ typedef struct FFGPUResult {
     uint64_t deviceId;
 } FFGPUResult;
 
+static_assert(sizeof(((FFGPUResult*) NULL)->pcieSpeed) == 8, "pcieSpeed is not 8 bytes");
+static_assert(sizeof(((FFGPUResult*) NULL)->psMax) == 4, "psMax has padding");
+
 const char* ffDetectGPU(const FFGPUOptions* options, FFlist* result);
 const char* ffDetectGPUImpl(const FFGPUOptions* options, FFlist* gpus);
 
@@ -104,4 +107,4 @@ static inline uint64_t ffGPUGeneral2Id(uint64_t originalId) {
     return (1ULL << 63) | originalId;
 }
 
-bool ffGPUFillVendorByDeviceName(FFGPUResult* gpu);
+bool ffGPUDetectTypeByVendorAndName(FFGPUResult* gpu);

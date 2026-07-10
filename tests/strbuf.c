@@ -1139,6 +1139,32 @@ int main(void) {
     VERIFY(strbuf.allocated == 0);
     ffStrbufDestroy(&strbuf);
 
+    #if FASTFETCH_STRBUF_DEFAULT_ALLOC == 32
+    ffStrbufEnsureFreeNoCheck(&strbuf, 1);
+    VERIFY(strbuf.allocated == 32);
+    ffStrbufDestroy(&strbuf);
+
+    ffStrbufEnsureFreeNoCheck(&strbuf, 31);
+    VERIFY(strbuf.allocated == 32);
+    ffStrbufDestroy(&strbuf);
+
+    ffStrbufEnsureFreeNoCheck(&strbuf, 32);
+    VERIFY(strbuf.allocated == 64);
+    ffStrbufDestroy(&strbuf);
+
+    ffStrbufEnsureFreeNoCheck(&strbuf, 33);
+    VERIFY(strbuf.allocated == 64);
+    ffStrbufDestroy(&strbuf);
+
+    ffStrbufEnsureFreeNoCheck(&strbuf, 63);
+    VERIFY(strbuf.allocated == 64);
+    ffStrbufDestroy(&strbuf);
+
+    ffStrbufEnsureFreeNoCheck(&strbuf, 64);
+    VERIFY(strbuf.allocated == 128);
+    ffStrbufDestroy(&strbuf);
+    #endif
+
     // Success
     puts("\e[32mAll tests passed!" FASTFETCH_TEXT_MODIFIER_RESET);
 }

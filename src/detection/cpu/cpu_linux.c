@@ -461,7 +461,6 @@ static void detectArmName(FFstrbuf* cpuinfo, FFCPUResult* cpu, uint32_t implId) 
     char* line = NULL;
     size_t len = 0;
     uint32_t lastPartId = UINT32_MAX;
-    uint32_t num = 0;
     while (ffStrbufGetline(&line, &len, cpuinfo)) {
         if (!ffStrStartsWith(line, "CPU part\t: ")) {
             continue;
@@ -529,10 +528,7 @@ static void detectArmName(FFstrbuf* cpuinfo, FFCPUResult* cpu, uint32_t implId) 
         }
         if (lastPartId != partId) {
             if (lastPartId != UINT32_MAX) {
-                if (num > 1) {
-                    ffStrbufAppendF(&cpu->name, "*%u", num);
-                }
-                ffStrbufAppendS(&cpu->name, " + ");
+                ffStrbufAppendC(&cpu->name, '+');
             }
             if (name) {
                 ffStrbufAppendS(&cpu->name, name);
@@ -542,13 +538,7 @@ static void detectArmName(FFstrbuf* cpuinfo, FFCPUResult* cpu, uint32_t implId) 
                 ffStrbufAppend(&cpu->name, &cpu->vendor);
             }
             lastPartId = partId;
-            num = 1;
-        } else {
-            ++num;
         }
-    }
-    if (num > 1) {
-        ffStrbufAppendF(&cpu->name, "*%u", num);
     }
 }
 #endif
@@ -778,11 +768,14 @@ static const char* detectPhysicalCores(FFCPUResult* cpu) {
         ssize_t len = ffReadFileDataRelative(cpuxfd, "topology/physical_package_id", sizeof(buf) - 1, buf);
         if (len > 0) {
             buf[len] = '\0';
-            unsigned long long id = strtoul(buf, NULL, 10);
-            if (__builtin_expect(id > 64, false)) { // Do 129-socket boards exist?
-                pkgHigh |= 1ULL << (id - 64);
-            } else if (__builtin_expect(id <= 64, true)) {
-                pkgLow |= 1ULL << id;
+            unsigned long long id = strtoull(buf, NULL, 10);
+            if (__builtin_expect(id < 128, true)) {
+                // Do 129-socket boards exist?
+                if (__builtin_expect(id >= 64, false)) {
+                    pkgHigh |= 1ULL << (id - 64);
+                } else {
+                    pkgLow |= 1ULL << id;
+                }
             }
         }
 

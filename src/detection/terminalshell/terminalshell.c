@@ -19,6 +19,7 @@
     #define _PATH_LOCALBASE "/usr/pkg"
 #elif _WIN32
 
+    #include "common/windows/registry.h"
     #include "common/windows/version.h"
     #include <windows.h>
 
@@ -248,6 +249,12 @@ static bool getShellVersionWinPowerShell(FFstrbuf* exe, FFstrbuf* version) {
         return true;
     }
 
+    FF_AUTO_CLOSE_FD HANDLE hKey = NULL;
+    if (ffRegOpenSubkeyForRead(ffRegGetRootKeyHandle(HKEY_LOCAL_MACHINE), L"SOFTWARE\\Microsoft\\PowerShell\\3\\PowerShellEngine", &hKey, NULL) && ffRegReadStrbuf(hKey, L"PowerShellVersion", version, NULL)) {
+        return true;
+    }
+
+    // Extremely slow
     return ffProcessAppendStdOut(version, (char* const[]) { exe->chars, "-NoLogo", "-NoProfile", "-Command", "$PSVersionTable.PSVersion.ToString()", NULL }) == NULL;
 }
 #endif

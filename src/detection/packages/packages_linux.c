@@ -84,7 +84,7 @@ static uint32_t countFilesRecursiveImpl(FFstrbuf* baseDirPath, const char* filen
         return 1;
     }
 
-    DIR* dirp = opendir(baseDirPath->chars);
+    FF_AUTO_CLOSE_DIR DIR* dirp = opendir(baseDirPath->chars);
     if (dirp == NULL) {
         return 0;
     }
@@ -106,7 +106,6 @@ static uint32_t countFilesRecursiveImpl(FFstrbuf* baseDirPath, const char* filen
         ffStrbufSubstrBefore(baseDirPath, baseDirPathLength);
     }
 
-    closedir(dirp);
     return sum;
 }
 
@@ -138,7 +137,7 @@ static uint32_t getNumElementsBySuffix(FFstrbuf* baseDir, const char* dirname, c
 }
 
 static uint32_t getXBPSImpl(FFstrbuf* baseDir) {
-    DIR* dir = opendir(baseDir->chars);
+    FF_AUTO_CLOSE_DIR DIR* dir = opendir(baseDir->chars);
     if (dir == NULL) {
         return 0;
     }
@@ -157,7 +156,6 @@ static uint32_t getXBPSImpl(FFstrbuf* baseDir) {
         break;
     }
 
-    closedir(dir);
     return result;
 }
 
@@ -616,6 +614,25 @@ static void getPackageCountsBedrock(FFstrbuf* baseDir, FFPackagesResult* package
     ffStrbufSubstrBefore(baseDir, baseDirLength);
 }
 
+static uint32_t getInstallReleasePackages(FFstrbuf* baseDir) {
+    uint32_t result = 0;
+
+    uint32_t baseDirLength = baseDir->length;
+    ffStrbufAppendS(baseDir, ".config/install_release/state.json");
+    if (ffPathExists(baseDir->chars, FF_PATHTYPE_ANY)) {
+        yyjson_doc* doc = yyjson_read_file(baseDir->chars, YYJSON_READ_NOFLAG, NULL, NULL);
+        if (doc != NULL) {
+            yyjson_val* root = yyjson_doc_get_root(doc);
+            if (yyjson_is_obj(root)) {
+                result = (uint32_t) yyjson_obj_size(root);
+            }
+            yyjson_doc_free(doc);
+        }
+    }
+    ffStrbufSubstrBefore(baseDir, baseDirLength);
+    return result;
+}
+
 void ffDetectPackagesImpl(FFPackagesResult* result, FFPackagesOptions* options) {
     FF_STRBUF_AUTO_DESTROY baseDir = ffStrbufCreateA(512);
     ffStrbufAppendS(&baseDir, FASTFETCH_TARGET_DIR_ROOT);
@@ -677,5 +694,9 @@ void ffDetectPackagesImpl(FFPackagesResult* result, FFPackagesOptions* options) 
     if (FF_PACKAGES_IS_ENABLED(options, APPIMAGE)) {
         result->appimage += getNumElementsBySuffix(&baseDir, "/AppImages", ".appimage");
         result->appimage += getNumElementsBySuffix(&baseDir, "/Applications", ".appimage");
+    }
+
+    if (FF_PACKAGES_IS_ENABLED(options, INSTALLRELEASE)) {
+        result->installrelease = getInstallReleasePackages(&baseDir);
     }
 }

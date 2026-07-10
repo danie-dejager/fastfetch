@@ -21,7 +21,7 @@
 
     #define GUID_DEVCLASS_DISPLAY_STRING L"{4d36e968-e325-11ce-bfc1-08002be10318}" // Found in <devguid.h>
 
-static bool queryPciDeviceInfo(FFGPUResult* gpu, D3DKMT_DEVICE_IDS* outDeviceIds) {
+static bool queryPciDeviceInfo(FFGPUResult* gpu, D3DKMT_DEVICE_IDS* outDeviceIds, bool queryPcieGen) {
     FF_DEBUG("Query PCI device info: %08llX", gpu->deviceId);
 
     static FFlist deviceIdsCache;
@@ -107,42 +107,44 @@ static bool queryPciDeviceInfo(FFGPUResult* gpu, D3DKMT_DEVICE_IDS* outDeviceIds
                 FF_DEBUG("Failed to get PCI bus number");
             }
 
-            DEVPROPTYPE propType;
+            if (queryPcieGen) {
+                DEVPROPTYPE propType;
 
-            pciBufLen = sizeof(entry->maxLinkSpeed);
-            // Reports PCEe gen despite the PKEY name
-            CONFIGRET ret = CM_Get_DevNode_PropertyW(devInst, &DEVPKEY_PciDevice_MaxLinkSpeed, &propType, (PBYTE) &entry->maxLinkSpeed, &pciBufLen, 0);
-            if (ret == CR_SUCCESS) {
-                FF_DEBUG("PCIe max GEN: %u", entry->maxLinkSpeed);
-            } else {
-                FF_DEBUG("Failed to get PCIe max GEN: %s", ffDebugConfigRet(ret));
-            }
-
-            if (entry->maxLinkSpeed != FF_GPU_PCIE_SPEED_UNSET) {
-                pciBufLen = sizeof(entry->maxLinkWidth);
-                ret = CM_Get_DevNode_PropertyW(devInst, &DEVPKEY_PciDevice_MaxLinkWidth, &propType, (PBYTE) &entry->maxLinkWidth, &pciBufLen, 0);
+                pciBufLen = sizeof(entry->maxLinkSpeed);
+                // Reports PCIe gen despite the PKEY name
+                CONFIGRET ret = CM_Get_DevNode_PropertyW(devInst, &DEVPKEY_PciDevice_MaxLinkSpeed, &propType, (PBYTE) &entry->maxLinkSpeed, &pciBufLen, 0);
                 if (ret == CR_SUCCESS) {
-                    FF_DEBUG("PCIe max link width: %u", entry->maxLinkWidth);
+                    FF_DEBUG("PCIe max GEN: %u", entry->maxLinkSpeed);
                 } else {
-                    FF_DEBUG("Failed to get PCIe max link width: %s", ffDebugConfigRet(ret));
+                    FF_DEBUG("Failed to get PCIe max GEN: %s", ffDebugConfigRet(ret));
                 }
-            }
 
-            pciBufLen = sizeof(entry->currentLinkSpeed);
-            ret = CM_Get_DevNode_PropertyW(devInst, &DEVPKEY_PciDevice_CurrentLinkSpeed, &propType, (PBYTE) &entry->currentLinkSpeed, &pciBufLen, 0);
-            if (ret == CR_SUCCESS) {
-                FF_DEBUG("PCIe GEN: %u", entry->currentLinkSpeed);
-            } else {
-                FF_DEBUG("Failed to get PCIe GEN: %s", ffDebugConfigRet(ret));
-            }
+                if (entry->maxLinkSpeed != FF_GPU_PCIE_SPEED_UNSET) {
+                    pciBufLen = sizeof(entry->maxLinkWidth);
+                    ret = CM_Get_DevNode_PropertyW(devInst, &DEVPKEY_PciDevice_MaxLinkWidth, &propType, (PBYTE) &entry->maxLinkWidth, &pciBufLen, 0);
+                    if (ret == CR_SUCCESS) {
+                        FF_DEBUG("PCIe max link width: %u", entry->maxLinkWidth);
+                    } else {
+                        FF_DEBUG("Failed to get PCIe max link width: %s", ffDebugConfigRet(ret));
+                    }
+                }
 
-            if (entry->currentLinkSpeed != FF_GPU_PCIE_SPEED_UNSET) {
-                pciBufLen = sizeof(entry->currentLinkWidth);
-                ret = CM_Get_DevNode_PropertyW(devInst, &DEVPKEY_PciDevice_CurrentLinkWidth, &propType, (PBYTE) &entry->currentLinkWidth, &pciBufLen, 0);
+                pciBufLen = sizeof(entry->currentLinkSpeed);
+                ret = CM_Get_DevNode_PropertyW(devInst, &DEVPKEY_PciDevice_CurrentLinkSpeed, &propType, (PBYTE) &entry->currentLinkSpeed, &pciBufLen, 0);
                 if (ret == CR_SUCCESS) {
-                    FF_DEBUG("PCIe current link width: %u", entry->currentLinkWidth);
+                    FF_DEBUG("PCIe GEN: %u", entry->currentLinkSpeed);
                 } else {
-                    FF_DEBUG("Failed to get PCIe current link width: %s", ffDebugConfigRet(ret));
+                    FF_DEBUG("Failed to get PCIe GEN: %s", ffDebugConfigRet(ret));
+                }
+
+                if (entry->currentLinkSpeed != FF_GPU_PCIE_SPEED_UNSET) {
+                    pciBufLen = sizeof(entry->currentLinkWidth);
+                    ret = CM_Get_DevNode_PropertyW(devInst, &DEVPKEY_PciDevice_CurrentLinkWidth, &propType, (PBYTE) &entry->currentLinkWidth, &pciBufLen, 0);
+                    if (ret == CR_SUCCESS) {
+                        FF_DEBUG("PCIe current link width: %u", entry->currentLinkWidth);
+                    } else {
+                        FF_DEBUG("Failed to get PCIe current link width: %s", ffDebugConfigRet(ret));
+                    }
                 }
             }
         }
@@ -151,13 +153,16 @@ static bool queryPciDeviceInfo(FFGPUResult* gpu, D3DKMT_DEVICE_IDS* outDeviceIds
     FF_LIST_FOR_EACH (CacheEntry, entry, deviceIdsCache) {
         if (gpu->deviceId == entry->adapterAddress) {
             FF_DEBUG("Cache hit for adapter address: %08llX", gpu->deviceId);
-            if (outDeviceIds->VendorID != -1u) {
+            if (outDeviceIds->VendorID == -1u) {
                 *outDeviceIds = entry->deviceIds;
             }
-            gpu->psMax.gen = (uint16_t) entry->maxLinkSpeed;
-            gpu->psMax.lanes = (uint16_t) entry->maxLinkWidth;
-            gpu->psCurr.gen = (uint16_t) entry->currentLinkSpeed;
-            gpu->psCurr.lanes = (uint16_t) entry->currentLinkWidth;
+
+            if (queryPcieGen) {
+                gpu->psMax.gen = (uint16_t) entry->maxLinkSpeed;
+                gpu->psMax.lanes = (uint16_t) entry->maxLinkWidth;
+                gpu->psCurr.gen = (uint16_t) entry->currentLinkSpeed;
+                gpu->psCurr.lanes = (uint16_t) entry->currentLinkWidth;
+            }
             return true;
         }
     }
@@ -220,7 +225,7 @@ static void ffStrbufSetWS(FFstrbuf* strbuf, const char16_t* str) {
 static void closeDxgfd(void) {
     if (dxgfd >= 0) {
         close(dxgfd);
-        dxgfd = 0;
+        dxgfd = -2;
         FF_DEBUG("Closed /dev/dxg file descriptor");
     }
 }
@@ -289,7 +294,7 @@ ffGPUDetectWsl2
         });
         if (!NT_SUCCESS(status)) {
             FF_DEBUG("KMTQAITYPE_ADAPTERTYPE query failed for adapter #%u: %s", i, ffDebugNtStatus(status));
-            continue;
+            goto close_adapter;
         }
         if (adapterType.SoftwareDevice) {
             FF_DEBUG("Skipping software adapter #%u", i);
@@ -371,9 +376,9 @@ ffGPUDetectWsl2
             FF_DEBUG("KMTQAITYPE_PHYSICALADAPTERDEVICEIDS query failed for adapter #%u: %s", i, ffDebugNtStatus(status));
         }
 
-        #if _WIN32
-        if (adapterAddress.BusNumber != -1u) {
-            if (queryPciDeviceInfo(gpu, &deviceIds.DeviceIds) && gpu->vendor.length == 0) {
+        #if _WIN32 && FF_WIN81_COMPAT
+        if (adapterAddress.BusNumber != -1u && (deviceIds.DeviceIds.VendorID == -1u || options->driverSpecific)) {
+            if (queryPciDeviceInfo(gpu, &deviceIds.DeviceIds, options->driverSpecific) && gpu->vendor.length == 0) {
                 ffStrbufSetStatic(&gpu->vendor, ffGPUGetVendorString(deviceIds.DeviceIds.VendorID));
             }
         }
@@ -448,6 +453,12 @@ ffGPUDetectWsl2
             FF_DEBUG("Attempting to query vendor name via registry for adapter #%u", i);
             queryVendorNameViaRegistry(&gpu->vendor, adapter->hAdapter);
         }
+
+    #if !FF_WIN81_COMPAT
+        if (adapterAddress.BusNumber != -1u && options->driverSpecific && gpu->pcieSpeed == FF_GPU_PCIE_SPEED_UNSET) {
+            queryPciDeviceInfo(gpu, &deviceIds.DeviceIds, options->driverSpecific);
+        }
+    #endif
 #endif
 
         if (gpu->name.length == 0) {
@@ -596,7 +607,7 @@ ffGPUDetectWsl2
         }
 
         if (gpu->type == FF_GPU_TYPE_UNKNOWN) {
-            if (ffGPUFillVendorByDeviceName(gpu)) {
+            if (ffGPUDetectTypeByVendorAndName(gpu)) {
                 // OK
             }
 #if _WIN32

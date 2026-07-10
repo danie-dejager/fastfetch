@@ -208,7 +208,7 @@ FF_A_UNUSED static bool detectDebianDerived(FFOSResult* result) {
         ffStrbufSetStatic(&result->idLike, "debian");
         return true;
     } else if (access("/usr/bin/pveversion", X_OK) == 0) {
-        ffStrbufSetStatic(&result->id, "pve");
+        ffStrbufSetStatic(&result->id, "proxmox");
         ffStrbufSetStatic(&result->idLike, "debian");
         ffStrbufSetStatic(&result->name, "Proxmox VE");
         ffStrbufClear(&result->versionID);
@@ -220,8 +220,30 @@ FF_A_UNUSED static bool detectDebianDerived(FFOSResult* result) {
                                                           NULL,
                                                       }) == NULL) { // 8.2.2
             ffStrbufTrimRightSpace(&result->versionID);
+            ffStrbufSetStatic(&result->prettyName, "Proxmox VE ");
+            ffStrbufAppend(&result->prettyName, &result->versionID);
+        } else {
+            ffStrbufSetStatic(&result->prettyName, "Proxmox VE");
         }
-        ffStrbufSetF(&result->prettyName, "Proxmox VE %s", result->versionID.chars);
+        return true;
+    } else if (access("/usr/sbin/proxmox-backup-manager", X_OK) == 0) {
+        ffStrbufSetStatic(&result->id, "proxmox");
+        ffStrbufSetStatic(&result->idLike, "debian");
+        ffStrbufSetStatic(&result->name, "Proxmox Backup Server");
+        ffStrbufClear(&result->versionID);
+        if (ffProcessAppendStdOut(&result->versionID, (char* const[]) {
+                                                          "/usr/bin/dpkg-query",
+                                                          "--showformat=${version}",
+                                                          "--show",
+                                                          "proxmox-backup-server",
+                                                          NULL,
+                                                      }) == NULL) {
+            ffStrbufTrimRightSpace(&result->versionID);
+            ffStrbufSetStatic(&result->prettyName, "Proxmox Backup Server ");
+            ffStrbufAppend(&result->prettyName, &result->versionID);
+        } else {
+            ffStrbufSetStatic(&result->prettyName, "Proxmox Backup Server");
+        }
         return true;
     } else if (ffPathExists("/etc/rpi-issue", FF_PATHTYPE_FILE)) {
         // Raspberry Pi OS
@@ -330,6 +352,17 @@ FF_A_UNUSED static void detectDeepinEnhancement(FFOSResult* result) {
     }
 }
 
+FF_A_UNUSED static void detectAstraVersion(FFOSResult* result) {
+    // `PRETTY_NAME` is just `Astra Linux`; the version is in `VERSION_ID`, e.g. `2.12_x86-64`
+    if (result->version.length == 0) { // Should be empty. Just in case
+        ffStrbufAppendSUntilC(&result->version, result->versionID.chars, '_');
+    }
+    if (result->version.length > 0) {
+        ffStrbufAppendC(&result->prettyName, ' ');
+        ffStrbufAppend(&result->prettyName, &result->version);
+    }
+}
+
 static void detectOS(FFOSResult* os) {
 #ifdef FF_CUSTOM_OS_RELEASE_PATH
     parseOsRelease(FF_STR(FF_CUSTOM_OS_RELEASE_PATH), os);
@@ -389,6 +422,8 @@ void ffDetectOSImpl(FFOSResult* os) {
         }
     } else if (ffStrbufEqualS(&os->id, "deepin")) {
         detectDeepinEnhancement(os);
+    } else if (ffStrbufEqualS(&os->id, "astra")) {
+        detectAstraVersion(os);
     }
 #endif
 }

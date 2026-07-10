@@ -65,7 +65,7 @@ static const char* detectFrequency(FFCPUResult* cpu) {
     // voltage-states5-sram stores supported <frequency / voltage> pairs of pcores from the lowest to the highest
     // voltage-states1-sram stores ecores'
     CFIndex propLength = CFDataGetLength(freqProperty);
-    if (propLength == 0 || propLength % (CFIndex) sizeof(uint32_t) * 2 != 0) {
+    if (propLength == 0 || propLength % (CFIndex) (sizeof(uint32_t) * 2) != 0) {
         return "Invalid \"voltage-states5-sram\" length";
     }
 

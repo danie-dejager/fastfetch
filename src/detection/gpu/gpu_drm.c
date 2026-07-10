@@ -50,7 +50,7 @@ const char* ffDrmDetectRadeon(const FFGPUOptions* options, FFGPUResult* gpu, con
     }
 
     if (ioctl(fd, DRM_IOCTL_RADEON_INFO, &(struct drm_radeon_info) {
-                                             .request = RADEON_INFO_MAX_SCLK, // MHz
+                                             .request = RADEON_INFO_MAX_SCLK, // KHz
                                              .value = (uintptr_t) &value,
                                          }) >= 0) {
         gpu->frequency = (uint32_t) (value / 1000u);
@@ -59,7 +59,7 @@ const char* ffDrmDetectRadeon(const FFGPUOptions* options, FFGPUResult* gpu, con
     if (options->driverSpecific) {
         struct drm_radeon_gem_info gemInfo;
         if (ioctl(fd, DRM_IOCTL_RADEON_GEM_INFO, &gemInfo) >= 0) {
-            // vram_usage can be bigger than vram_usage, so we use vram_size here
+            // vram_usage can be bigger than vram_size, so we use vram_size here
             gpu->dedicated.total = gemInfo.vram_size;
             gpu->shared.total = gemInfo.gart_size;
 
@@ -146,6 +146,7 @@ const char* ffDrmDetectAmdgpu(const FFGPUOptions* options, FFGPUResult* gpu, con
                 ffStrbufAppendF(&gpu->memoryType, "Unknown (%u)", devInfo.vram_type);
                 break;
         }
+    #undef FF_VRAM_CASE
     }
 
     struct drm_amdgpu_memory_info memInfo;
@@ -228,12 +229,12 @@ static inline int popcountBytes(uint8_t* bytes, uint32_t length) {
         length -= 4;
     }
     if (length >= 2) {
-        count += __builtin_popcountl(*(uint16_t*) bytes);
+        count += __builtin_popcount(*(uint16_t*) bytes);
         bytes += 2;
         length -= 2;
     }
     if (length) {
-        count += __builtin_popcountl(*(uint8_t*) bytes);
+        count += __builtin_popcount(*(uint8_t*) bytes);
     }
     return count;
 }
@@ -306,7 +307,11 @@ const char* ffDrmDetectAsahi(FFGPUResult* gpu, int fd) {
                                                   .size = sizeof(paramsGlobal),
                                               }) >= 0) {
         // They removed `unstable_uabi_version` from the struct. Hopefully they won't introduce new ABI changes.
-        gpu->coreCount = (int32_t) (paramsGlobal.num_clusters_total * paramsGlobal.num_cores_per_cluster);
+        assert(paramsGlobal.num_clusters_total <= DRM_ASAHI_MAX_CLUSTERS);
+        gpu->coreCount = 0;
+        for (uint32_t i = 0; i < paramsGlobal.num_clusters_total; i++) {
+            gpu->coreCount += __builtin_popcountll(paramsGlobal.core_masks[i]);
+        }
         gpu->frequency = paramsGlobal.max_frequency_khz / 1000;
         gpu->deviceId = ffGPUGeneral2Id(paramsGlobal.chip_id);
 

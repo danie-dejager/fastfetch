@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.12.0) # target_link_libraries with OBJECT libs & project homepage url
 
 project(fastfetch
-    VERSION 2.64.2
+    VERSION 2.66.0
     LANGUAGES C
     DESCRIPTION "Fast neofetch-like system information tool"
     HOMEPAGE_URL "https://github.com/fastfetch-cli/fastfetch"
@@ -81,7 +81,8 @@ cmake_dependent_option(ENABLE_WAYLAND "Enable wayland-client" ON "LINUX OR FreeB
 cmake_dependent_option(ENABLE_XCB_RANDR "Enable xcb-randr" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR ANDROID OR SunOS OR GNU" OFF)
 cmake_dependent_option(ENABLE_XRANDR "Enable xrandr" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR ANDROID OR SunOS OR GNU" OFF)
 cmake_dependent_option(ENABLE_DRM "Enable libdrm" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR SunOS OR GNU" OFF)
-cmake_dependent_option(ENABLE_VA "Enable libva" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR SunOS OR GNU" OFF)
+cmake_dependent_option(ENABLE_VADRM "Enable libva-drm" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR SunOS OR GNU" OFF)
+cmake_dependent_option(ENABLE_VAX11 "Enable libva-x11" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR SunOS OR GNU" OFF)
 cmake_dependent_option(ENABLE_VDPAU "Enable vdpau" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR SunOS OR GNU" OFF)
 cmake_dependent_option(ENABLE_GIO "Enable gio-2.0" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR ANDROID OR SunOS OR GNU" OFF)
 cmake_dependent_option(ENABLE_DCONF "Enable dconf" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR ANDROID OR SunOS OR GNU" OFF)
@@ -104,6 +105,7 @@ cmake_dependent_option(ENABLE_THREADS "Enable multithreading" ON "Threads_FOUND"
 option(ENABLE_ZLIB "Enable zlib" ON)
 option(ENABLE_SYSTEM_YYJSON "Use system provided (instead of fastfetch embedded) yyjson library" OFF)
 option(ENABLE_ASAN "Build fastfetch with ASAN (address sanitizer)" OFF)
+option(ENABLE_TRACER "Build fastfetch with function tracing" OFF)
 option(ENABLE_LTO "Enable link-time optimization in release mode if supported" ON)
 option(BUILD_FLASHFETCH "Build flashfetch" ON) # Also build the flashfetch binary
 option(BUILD_TESTS "Build tests" OFF) # Also create test executables
@@ -1364,6 +1366,22 @@ elseif(GNU)
    )
 endif()
 
+if(ENABLE_TRACER)
+    message(STATUS "Tracer is enabled")
+    list(APPEND LIBFASTFETCH_SRC src/common/impl/tracer.c)
+    if(CMAKE_C_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -finstrument-functions-after-inlining")
+    else()
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -finstrument-functions -Dinline=\"__attribute__((no_instrument_function)) inline\"")
+    endif()
+    if(NOT WIN32)
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -rdynamic")
+    elseif(CMAKE_C_COMPILER_ID MATCHES "Clang")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -gcodeview -fuse-ld=lld")
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--pdb=${CMAKE_BINARY_DIR}/fastfetch.pdb")
+    endif()
+endif()
+
 # Proprietary GPU driver APIs
 if(LINUX OR FreeBSD OR WIN32)
     list(APPEND LIBFASTFETCH_SRC src/detection/gpu/gpu_nvidia.c)
@@ -1682,9 +1700,13 @@ ff_lib_enable(DRM
     "libdrm"
     "Libdrm"
 )
-ff_lib_enable(VA
+ff_lib_enable(VADRM
     "libva-drm"
     "Libva-drm"
+)
+ff_lib_enable(VAX11
+    "libva-x11"
+    "Libva-x11"
 )
 ff_lib_enable(VDPAU
     "vdpau"
@@ -1882,6 +1904,11 @@ elseif(WIN32)
     if(HAVE_WINRT)
         target_link_libraries(libfastfetch
             PRIVATE "runtimeobject"
+        )
+    endif()
+    if(ENABLE_TRACER)
+        target_link_libraries(libfastfetch
+            PRIVATE "dbghelp"
         )
     endif()
 elseif(FreeBSD)

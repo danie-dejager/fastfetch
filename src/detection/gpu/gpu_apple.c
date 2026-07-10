@@ -48,8 +48,6 @@ static double detectGpuTemp(const FFstrbuf* gpuName) {
 }
 
 #ifdef __aarch64__
-    #include "common/apple/cf_helpers.h"
-
     #include <IOKit/IOKitLib.h>
 
 static const char* detectFrequency(FFGPUResult* gpu) {
@@ -71,7 +69,7 @@ static const char* detectFrequency(FFGPUResult* gpu) {
 
     // voltage-states9-sram stores supported <frequency / voltage> pairs of gpu from the lowest to the highest
     CFIndex propLength = CFDataGetLength(freqProperty);
-    if (propLength == 0 || propLength % (CFIndex) sizeof(uint32_t) * 2 != 0) {
+    if (propLength == 0 || propLength % (CFIndex) (sizeof(uint32_t) * 2) != 0) {
         return "Invalid \"voltage-states9-sram\" length";
     }
 

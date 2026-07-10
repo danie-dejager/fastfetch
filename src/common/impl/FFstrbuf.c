@@ -45,18 +45,33 @@ void ffStrbufInitMoveNS(FFstrbuf* strbuf, uint32_t length, char* heapStr) {
     strbuf->chars = heapStr;
 }
 
-void ffStrbufEnsureFree(FFstrbuf* strbuf, uint32_t free) {
-    if (ffStrbufGetFree(strbuf) >= free && !(strbuf->allocated == 0 && strbuf->length > 0)) {
-        return;
-    }
+void ffStrbufInitF(FFstrbuf* strbuf, const char* format, ...) {
+    va_list arguments;
+    va_start(arguments, format);
+    ffStrbufInitVF(strbuf, format, arguments);
+    va_end(arguments);
+}
 
-    uint32_t allocate = strbuf->allocated;
-    if (allocate < FASTFETCH_STRBUF_DEFAULT_ALLOC) {
+FFstrbuf ffStrbufCreateF(const char* format, ...) {
+    FFstrbuf strbuf;
+
+    va_list arguments;
+    va_start(arguments, format);
+    ffStrbufInitVF(&strbuf, format, arguments);
+    va_end(arguments);
+
+    return strbuf;
+}
+
+void ffStrbufEnsureFreeNoCheck(FFstrbuf* strbuf, uint32_t free) {
+    uint32_t allocate = strbuf->length + free;
+    if (allocate < FASTFETCH_STRBUF_DEFAULT_ALLOC) { // `<` for null terminator
         allocate = FASTFETCH_STRBUF_DEFAULT_ALLOC;
-    }
-
-    while ((strbuf->length + free + 1) > allocate) { // + 1 for the null byte
-        allocate *= 2;
+    } else {
+        // Round up to the next power of 2.
+        // If the value is already a power of 2, it will be rounded up to the next power of 2.
+        assert(allocate < (UINT32_MAX >> 1));
+        allocate = 1U << (32 - __builtin_clz(allocate));
     }
 
     if (strbuf->allocated == 0) {
@@ -100,46 +115,6 @@ void ffStrbufEnsureFixedLengthFree(FFstrbuf* strbuf, uint32_t free) {
     strbuf->allocated = newCap;
 }
 
-void ffStrbufClear(FFstrbuf* strbuf) {
-    assert(strbuf != NULL);
-
-    if (strbuf->allocated == 0) {
-        strbuf->chars = CHAR_NULL_PTR;
-    } else {
-        strbuf->chars[0] = '\0';
-    }
-
-    strbuf->length = 0;
-}
-
-void ffStrbufAppendC(FFstrbuf* strbuf, char c) {
-    ffStrbufEnsureFree(strbuf, 1);
-    strbuf->chars[strbuf->length++] = c;
-    strbuf->chars[strbuf->length] = '\0';
-}
-
-void ffStrbufAppendNC(FFstrbuf* strbuf, uint32_t num, char c) {
-    if (num == 0) {
-        return;
-    }
-
-    ffStrbufEnsureFree(strbuf, num);
-    memset(&strbuf->chars[strbuf->length], c, num);
-    strbuf->length += num;
-    strbuf->chars[strbuf->length] = '\0';
-}
-
-void ffStrbufAppendNS(FFstrbuf* strbuf, uint32_t length, const char* value) {
-    if (value == NULL || length == 0) {
-        return;
-    }
-
-    ffStrbufEnsureFree(strbuf, length);
-    memcpy(&strbuf->chars[strbuf->length], value, length);
-    strbuf->length += length;
-    strbuf->chars[strbuf->length] = '\0';
-}
-
 void ffStrbufAppendTransformS(FFstrbuf* strbuf, const char* value, int (*transformFunc)(int)) {
     if (value == NULL) {
         return;
@@ -168,7 +143,7 @@ void ffStrbufAppendVF(FFstrbuf* strbuf, const char* format, va_list arguments) {
     int written = vsnprintf(strbuf->chars + strbuf->length, strbuf->allocated > 0 ? free + 1 : 0, format, arguments);
 
     if (written > 0 && (uint32_t) written > free) {
-        ffStrbufEnsureFree(strbuf, (uint32_t) written);
+        ffStrbufEnsureFreeNoCheck(strbuf, (uint32_t) written);
         written = vsnprintf(strbuf->chars + strbuf->length, (uint32_t) written + 1, format, copy);
     }
 
@@ -548,33 +523,6 @@ bool ffStrbufEnsureEndsWithC(FFstrbuf* strbuf, char c) {
 
     ffStrbufAppendC(strbuf, c);
     return true;
-}
-
-void ffStrbufWriteTo(const FFstrbuf* strbuf, FILE* file) {
-    fwrite(strbuf->chars, sizeof(*strbuf->chars), strbuf->length, file);
-}
-
-void ffStrbufPutTo(const FFstrbuf* strbuf, FILE* file) {
-    ffStrbufWriteTo(strbuf, file);
-    fputc('\n', file);
-}
-
-double ffStrbufToDouble(const FFstrbuf* strbuf, double defaultValue) {
-    char* str_end;
-    double result = strtod(strbuf->chars, &str_end);
-    return str_end == strbuf->chars ? defaultValue : result;
-}
-
-uint64_t ffStrbufToUInt(const FFstrbuf* strbuf, uint64_t defaultValue) {
-    char* str_end;
-    unsigned long long result = strtoull(strbuf->chars, &str_end, 10);
-    return str_end == strbuf->chars ? defaultValue : (uint64_t) result;
-}
-
-int64_t ffStrbufToSInt(const FFstrbuf* strbuf, int64_t defaultValue) {
-    char* str_end;
-    long long result = strtoll(strbuf->chars, &str_end, 10);
-    return str_end == strbuf->chars ? defaultValue : (int64_t) result;
 }
 
 void ffStrbufAppendSInt(FFstrbuf* strbuf, int64_t value) {

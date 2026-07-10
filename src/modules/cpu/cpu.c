@@ -47,10 +47,6 @@ bool ffPrintCPU(FFCPUOptions* options) {
 
             FF_STRBUF_AUTO_DESTROY str = ffStrbufCreate();
 
-            if (cpu.packages > 1) {
-                ffStrbufAppendF(&str, "%u x ", cpu.packages);
-            }
-
             if (cpu.name.length > 0) {
                 ffStrbufAppend(&str, &cpu.name);
             } else if (cpu.vendor.length > 0) {
