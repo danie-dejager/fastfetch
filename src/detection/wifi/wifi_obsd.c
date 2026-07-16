@@ -20,7 +20,7 @@ const char* ffDetectWifi(FFlist* result) {
         return "socket() failed";
     }
 
-    for (struct if_nameindex* i = infs; !(i->if_index == 0 && i->if_name == NULL); ++i) {
+    for (struct if_nameindex* i = infs; !(i->if_index == 0 && i->if_name == nullptr); ++i) {
         if (!ffStrStartsWith(i->if_name, "iwm")) {
             continue;
         }
@@ -105,5 +105,5 @@ const char* ffDetectWifi(FFlist* result) {
     }
 
     if_freenameindex(infs);
-    return NULL;
+    return nullptr;
 }

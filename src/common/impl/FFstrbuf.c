@@ -20,9 +20,9 @@ void ffStrbufInitA(FFstrbuf* strbuf, uint32_t allocate) {
 }
 
 void ffStrbufInitVF(FFstrbuf* strbuf, const char* format, va_list arguments) {
-    assert(format != NULL);
+    assert(format != nullptr);
 
-    char* buffer = NULL;
+    char* buffer = nullptr;
     int len = vasprintf(&buffer, format, arguments);
     assert(len >= 0);
 
@@ -32,7 +32,7 @@ void ffStrbufInitVF(FFstrbuf* strbuf, const char* format, va_list arguments) {
 // Takes ownership of `heapStr`. The caller must not free `heapStr` after calling this
 // function; the memory will be managed and freed via the associated FFstrbuf.
 void ffStrbufInitMoveNS(FFstrbuf* strbuf, uint32_t length, char* heapStr) {
-    assert(heapStr != NULL);
+    assert(heapStr != nullptr);
 
     strbuf->length = length;
     size_t allocSize = ffMallocUsableSize(heapStr);
@@ -116,7 +116,7 @@ void ffStrbufEnsureFixedLengthFree(FFstrbuf* strbuf, uint32_t free) {
 }
 
 void ffStrbufAppendTransformS(FFstrbuf* strbuf, const char* value, int (*transformFunc)(int)) {
-    if (value == NULL) {
+    if (value == nullptr) {
         return;
     }
 
@@ -134,7 +134,7 @@ void ffStrbufAppendTransformS(FFstrbuf* strbuf, const char* value, int (*transfo
 }
 
 void ffStrbufAppendVF(FFstrbuf* strbuf, const char* format, va_list arguments) {
-    assert(format != NULL);
+    assert(format != nullptr);
 
     va_list copy;
     va_copy(copy, arguments);
@@ -155,12 +155,12 @@ void ffStrbufAppendVF(FFstrbuf* strbuf, const char* format, va_list arguments) {
 }
 
 const char* ffStrbufAppendSUntilC(FFstrbuf* strbuf, const char* value, char until) {
-    if (value == NULL) {
-        return NULL;
+    if (value == nullptr) {
+        return nullptr;
     }
 
     const char* end = strchr(value, until);
-    if (end == NULL) {
+    if (end == nullptr) {
         ffStrbufAppendS(strbuf, value);
     } else {
         ffStrbufAppendNS(strbuf, (uint32_t) (end - value), value);
@@ -169,7 +169,7 @@ const char* ffStrbufAppendSUntilC(FFstrbuf* strbuf, const char* value, char unti
 }
 
 void ffStrbufSetF(FFstrbuf* strbuf, const char* format, ...) {
-    assert(format != NULL);
+    assert(format != nullptr);
 
     va_list arguments;
     va_start(arguments, format);
@@ -186,7 +186,7 @@ void ffStrbufSetF(FFstrbuf* strbuf, const char* format, ...) {
 }
 
 void ffStrbufAppendF(FFstrbuf* strbuf, const char* format, ...) {
-    assert(format != NULL);
+    assert(format != nullptr);
 
     va_list arguments;
     va_start(arguments, format);
@@ -195,7 +195,7 @@ void ffStrbufAppendF(FFstrbuf* strbuf, const char* format, ...) {
 }
 
 void ffStrbufPrependNS(FFstrbuf* strbuf, uint32_t length, const char* value) {
-    if (value == NULL || length == 0) {
+    if (value == nullptr || length == 0) {
         return;
     }
 
@@ -213,14 +213,14 @@ void ffStrbufPrependC(FFstrbuf* strbuf, char c) {
 }
 
 void ffStrbufSetNS(FFstrbuf* strbuf, uint32_t length, const char* value) {
-    assert(strbuf != NULL);
+    assert(strbuf != nullptr);
 
     if (length == 0) {
         ffStrbufClear(strbuf);
         return;
     }
 
-    assert(value != NULL);
+    assert(value != nullptr);
 
     if (strbuf->allocated <= length) {
         char* newBuf = malloc(sizeof(char) * (length + 1));
@@ -533,7 +533,7 @@ void ffStrbufAppendSInt(FFstrbuf* strbuf, int64_t value) {
     unsafe_yyjson_set_sint(&val, value);
     char* end = yyjson_write_number(&val, start);
 
-    assert(end != NULL);
+    assert(end != nullptr);
 
     strbuf->length += (uint32_t) (end - start);
 }
@@ -546,7 +546,7 @@ void ffStrbufAppendUInt(FFstrbuf* strbuf, uint64_t value) {
     unsafe_yyjson_set_uint(&val, value);
     char* end = yyjson_write_number(&val, start);
 
-    assert(end != NULL);
+    assert(end != nullptr);
 
     strbuf->length += (uint32_t) (end - start);
 }
@@ -713,7 +713,7 @@ bool ffStrbufMatchSeparatedNS(const FFstrbuf* strbuf, uint32_t compLength, const
 
     for (const char* p = comp; p < comp + compLength;) {
         const char* colon = memchr(p, separator, (size_t) (comp + compLength - p));
-        if (colon == NULL) {
+        if (colon == nullptr) {
             uint32_t remainingLen = (uint32_t) (comp + compLength - p);
             return strbuf->length == remainingLen && memcmp(strbuf->chars, p, remainingLen) == 0;
         }
@@ -741,7 +741,7 @@ bool ffStrbufMatchSeparatedIgnCaseNS(const FFstrbuf* strbuf, uint32_t compLength
 
     for (const char* p = comp; p < comp + compLength;) {
         const char* colon = memchr(p, separator, (size_t) (comp + compLength - p));
-        if (colon == NULL) {
+        if (colon == nullptr) {
             uint32_t remainingLen = (uint32_t) (comp + compLength - p);
             return strbuf->length == remainingLen && strncasecmp(strbuf->chars, p, remainingLen) == 0;
         }

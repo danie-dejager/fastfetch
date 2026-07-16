@@ -21,7 +21,7 @@ static void printDisk(FFDiskOptions* options, const FFDisk* disk, uint32_t index
         FF_STRBUF_AUTO_DESTROY mountpointLink = ffStrbufCreate();
         FF_STRBUF_AUTO_DESTROY nameLink = ffStrbufCreate();
 #ifdef __linux__
-        if (getenv("WSL_DISTRO_NAME") != NULL && getenv("WT_SESSION") != NULL) {
+        if (getenv("WSL_DISTRO_NAME") != nullptr && getenv("WT_SESSION") != nullptr) {
             if (ffStrbufEqualS(&disk->filesystem, "9p") && ffStrbufStartsWithS(&disk->mountpoint, "/mnt/")) {
                 ffStrbufSetF(&mountpointLink, "\e]8;;file:///%c:/\e\\%s\e]8;;\e\\", disk->mountpoint.chars[5], disk->mountpoint.chars);
                 ffStrbufSetF(&nameLink, "\e]8;;file:///%c:/\e\\%s\e]8;;\e\\", disk->mountpoint.chars[5], disk->name.chars);

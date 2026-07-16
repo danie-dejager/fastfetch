@@ -7,7 +7,7 @@
 const char* ffDetectMemory(FFMemoryResult* ram) {
     struct uvmexp_sysctl buf;
     size_t length = sizeof(buf);
-    if (sysctl((int[]) { CTL_VM, VM_UVMEXP2 }, 2, &buf, &length, NULL, 0) < 0) {
+    if (sysctl((int[]) { CTL_VM, VM_UVMEXP2 }, 2, &buf, &length, nullptr, 0) < 0) {
         return "sysctl(CTL_VM, VM_UVMEXP2) failed";
     }
 
@@ -20,5 +20,5 @@ const char* ffDetectMemory(FFMemoryResult* ram) {
         ram->bytesUsed -= (uint64_t) bytesArc;
     }
 
-    return NULL;
+    return nullptr;
 }

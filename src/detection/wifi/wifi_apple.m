@@ -161,5 +161,5 @@ const char* ffDetectWifi(FFlist* result)
         }
     }
 
-    return NULL;
+    return nullptr;
 }

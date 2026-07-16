@@ -308,7 +308,7 @@ void ffGenerateLocalIpJsonConfig(FFLocalIpOptions* options, yyjson_mut_doc* doc,
     if (options->ipv6Type == FF_LOCALIP_IPV6_TYPE_AUTO) {
         yyjson_mut_obj_add_bool(doc, module, "showIpv6", !!(options->showType & FF_LOCALIP_TYPE_IPV6_BIT));
     } else {
-        const char* str = NULL;
+        const char* str = nullptr;
         switch (options->ipv6Type) {
             case FF_LOCALIP_IPV6_TYPE_GUA_BIT:
                 str = "gua";
@@ -350,7 +350,7 @@ void ffGenerateLocalIpJsonConfig(FFLocalIpOptions* options, yyjson_mut_doc* doc,
     yyjson_mut_obj_add_strbuf(doc, module, "namePrefix", &options->namePrefix);
 }
 
-bool ffGenerateLocalIpJsonResult(FF_A_UNUSED FFLocalIpOptions* options, yyjson_mut_doc* doc, yyjson_mut_val* module) {
+bool ffGenerateLocalIpJsonResult([[maybe_unused]] FFLocalIpOptions* options, yyjson_mut_doc* doc, yyjson_mut_val* module) {
     FF_LIST_AUTO_DESTROY results = ffListCreate();
 
     const char* error = ffDetectLocalIps(options, &results);

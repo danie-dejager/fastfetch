@@ -19,7 +19,7 @@ bool ffPrintCommand(FFCommandOptions* options) {
 
     if (options->splitLines) {
         uint8_t index = 0;
-        char* line = NULL;
+        char* line = nullptr;
         size_t len = 0;
         while (ffStrbufGetline(&line, &len, &result)) {
             if (options->moduleArgs.outputFormat.length == 0) {
@@ -94,7 +94,7 @@ void ffGenerateCommandJsonConfig(FFCommandOptions* options, yyjson_mut_doc* doc,
     yyjson_mut_obj_add_bool(doc, module, "splitLines", options->splitLines);
 }
 
-bool ffGenerateCommandJsonResult(FF_A_UNUSED FFCommandOptions* options, yyjson_mut_doc* doc, yyjson_mut_val* module) {
+bool ffGenerateCommandJsonResult([[maybe_unused]] FFCommandOptions* options, yyjson_mut_doc* doc, yyjson_mut_val* module) {
     FF_STRBUF_AUTO_DESTROY result = ffStrbufCreate();
     const char* error = ffDetectCommand(options, &result);
 
@@ -110,7 +110,7 @@ bool ffGenerateCommandJsonResult(FF_A_UNUSED FFCommandOptions* options, yyjson_m
 
     if (options->splitLines) {
         yyjson_mut_val* jsonArray = yyjson_mut_obj_add_arr(doc, module, "result");
-        char* line = NULL;
+        char* line = nullptr;
         size_t len = 0;
         while (ffStrbufGetline(&line, &len, &result)) {
             yyjson_mut_arr_add_strncpy(doc, jsonArray, line, len);

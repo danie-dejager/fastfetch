@@ -23,12 +23,12 @@ const char* ffDetectPhysicalDisk(FFlist* result, FFPhysicalDiskOptions* options)
 
     void* snap = geom_stats_snapshot_get();
     struct devstat* snapIter;
-    while ((snapIter = geom_stats_snapshot_next(snap)) != NULL) {
+    while ((snapIter = geom_stats_snapshot_next(snap)) != nullptr) {
         if (snapIter->device_type & DEVSTAT_TYPE_PASS) {
             continue;
         }
         struct gident* geomId = geom_lookupid(&geomTree, snapIter->id);
-        if (geomId == NULL) {
+        if (geomId == nullptr) {
             continue;
         }
         if (geomId->lg_what != ISPROVIDER) {
@@ -118,7 +118,7 @@ const char* ffDetectPhysicalDisk(FFlist* result, FFPhysicalDiskOptions* options)
     geom_stats_snapshot_free(snap);
     geom_stats_close();
 
-    return NULL;
+    return nullptr;
 }
 #else
 const char* ffDetectPhysicalDisk(FFlist* result, FFPhysicalDiskOptions* options) {

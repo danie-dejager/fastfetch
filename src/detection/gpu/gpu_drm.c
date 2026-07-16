@@ -80,7 +80,7 @@ const char* ffDrmDetectRadeon(const FFGPUOptions* options, FFGPUResult* gpu, con
         }
     }
 
-    return NULL;
+    return nullptr;
 }
 
 const char* ffDrmDetectAmdgpu(const FFGPUOptions* options, FFGPUResult* gpu, const char* renderPath) {
@@ -172,7 +172,7 @@ const char* ffDrmDetectAmdgpu(const FFGPUOptions* options, FFGPUResult* gpu, con
         gpu->coreUsage = value;
     }
 
-    return NULL;
+    return nullptr;
 }
 
 const char* ffDrmDetectI915(FFGPUResult* gpu, int fd) {
@@ -213,7 +213,7 @@ const char* ffDrmDetectI915(FFGPUResult* gpu, int fd) {
             }
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 static inline int popcountBytes(uint8_t* bytes, uint32_t length) {
@@ -296,7 +296,7 @@ const char* ffDrmDetectXe(FFGPUResult* gpu, int fd) {
             }
         }
     }
-    return flag ? NULL : "Failed to query Xe GPU information";
+    return flag ? nullptr : "Failed to query Xe GPU information";
 }
 
 const char* ffDrmDetectAsahi(FFGPUResult* gpu, int fd) {
@@ -334,7 +334,7 @@ const char* ffDrmDetectAsahi(FFGPUResult* gpu, int fd) {
             ffStrbufSetF(&gpu->name, "Apple M%d%s (G%d%c %02X)", paramsGlobal.gpu_generation - 12, variant, paramsGlobal.gpu_generation, paramsGlobal.gpu_variant, paramsGlobal.gpu_revision + 0xA0);
         }
 
-        return NULL;
+        return nullptr;
     }
 
     return "Failed to query Asahi GPU information";
@@ -362,7 +362,7 @@ const char* ffDrmDetectNouveau(FFGPUResult* gpu, int fd) {
         gpu->coreCount = (int32_t) getparam.value;
     }
 
-    return NULL;
+    return nullptr;
 }
 
 #endif // FF_HAVE_DRM
@@ -371,7 +371,7 @@ const char* ffDrmDetectNouveau(FFGPUResult* gpu, int fd) {
 
 const char* ffGPUDetectDriverSpecific(const FFGPUOptions* options, FFGPUResult* gpu, FFGpuDriverPciBusId pciBusId) {
 #if !__OpenBSD__
-    __typeof__(&ffDetectNvidiaGpuInfo) detectFn;
+    typeof(&ffDetectNvidiaGpuInfo) detectFn;
     const char* soName;
     if (getDriverSpecificDetectionFn(gpu->vendor.chars, &detectFn, &soName) && (options->temp || options->driverSpecific)) {
         return detectFn(&(FFGpuDriverCondition) {
@@ -380,17 +380,17 @@ const char* ffGPUDetectDriverSpecific(const FFGPUOptions* options, FFGPUResult* 
                         },
             (FFGpuDriverResult) {
                 .index = &gpu->index,
-                .temp = options->temp ? &gpu->temperature : NULL,
-                .memory = options->driverSpecific ? &gpu->dedicated : NULL,
-                .sharedMemory = options->driverSpecific ? &gpu->shared : NULL,
-                .memoryType = options->driverSpecific ? &gpu->memoryType : NULL,
-                .coreCount = options->driverSpecific ? (uint32_t*) &gpu->coreCount : NULL,
-                .coreUsage = options->driverSpecific ? &gpu->coreUsage : NULL,
+                .temp = options->temp ? &gpu->temperature : nullptr,
+                .memory = options->driverSpecific ? &gpu->dedicated : nullptr,
+                .sharedMemory = options->driverSpecific ? &gpu->shared : nullptr,
+                .memoryType = options->driverSpecific ? &gpu->memoryType : nullptr,
+                .coreCount = options->driverSpecific ? (uint32_t*) &gpu->coreCount : nullptr,
+                .coreUsage = options->driverSpecific ? &gpu->coreUsage : nullptr,
                 .type = &gpu->type,
-                .frequency = options->driverSpecific ? &gpu->frequency : NULL,
+                .frequency = options->driverSpecific ? &gpu->frequency : nullptr,
                 .name = &gpu->name,
-                .psCurr = options->driverSpecific ? &gpu->psCurr : NULL,
-                .psMax = options->driverSpecific ? &gpu->psMax : NULL,
+                .psCurr = options->driverSpecific ? &gpu->psCurr : nullptr,
+                .psMax = options->driverSpecific ? &gpu->psMax : nullptr,
             },
             soName);
     }

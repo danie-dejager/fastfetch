@@ -14,7 +14,7 @@
 const char* detectTermux(FFTerminalFontResult* terminalFont) {
     if (!ffPathExists(FF_TERMUX_FONT_PATH, FF_PATHTYPE_FILE)) {
         ffFontInitCopy(&terminalFont->font, "monospace");
-        return NULL;
+        return nullptr;
     }
 
 #ifdef FF_HAVE_FREETYPE
@@ -25,9 +25,9 @@ const char* detectTermux(FFTerminalFontResult* terminalFont) {
     FF_LIBRARY_LOAD_SYMBOL_MESSAGE(freetype, FT_Done_Face);
     FF_LIBRARY_LOAD_SYMBOL_MESSAGE(freetype, FT_Done_FreeType);
 
-    FT_Library library = NULL;
-    FT_Face face = NULL;
-    const char* error = NULL;
+    FT_Library library = nullptr;
+    FT_Face face = nullptr;
+    const char* error = nullptr;
 
     if (ffFT_Init_FreeType(&library)) {
         error = "FT_Init_FreeType() failed";

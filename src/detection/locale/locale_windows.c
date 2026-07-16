@@ -12,5 +12,5 @@ const char* ffDetectLocale(FFstrbuf* result) {
 
     ffStrbufSetNWS(result, (uint32_t) size - 1, name);
 
-    return NULL;
+    return nullptr;
 }

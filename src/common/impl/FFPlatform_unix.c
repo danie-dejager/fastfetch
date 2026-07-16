@@ -57,7 +57,7 @@ static void getExePath(FFPlatform* platform) {
             4,
             exePath,
             &exePathLen,
-            NULL,
+            nullptr,
             0) < 0)
         exePathLen = 0;
     else {
@@ -68,7 +68,7 @@ static void getExePath(FFPlatform* platform) {
     // Current implementation uses argv[0], which can be easily spoofed.
     // See #2195
     size_t exePathLen = 0;
-    kvm_t* kd = kvm_openfiles(NULL, NULL, NULL, KVM_NO_FILES, NULL);
+    kvm_t* kd = kvm_openfiles(nullptr, nullptr, nullptr, KVM_NO_FILES, nullptr);
     if (kd) {
         int kpCount;
         struct kinfo_proc* kp = kvm_getprocs(kd, KERN_PROC_PID, (pid_t) platform->pid, sizeof(*kp), &kpCount);
@@ -77,7 +77,7 @@ static void getExePath(FFPlatform* platform) {
             if (argv && argv[0]) {
                 char* arg0 = argv[0];
                 if (arg0[0]) {
-                    if (strchr(arg0, '/') != NULL) // likely a path (absolute or relative)
+                    if (strchr(arg0, '/') != nullptr) // likely a path (absolute or relative)
                     {
                         exePathLen = strlen(arg0);
                         if (exePathLen < ARRAY_SIZE(exePath)) {
@@ -88,7 +88,7 @@ static void getExePath(FFPlatform* platform) {
                         }
                     } else {
                         FF_STRBUF_AUTO_DESTROY tmpPath = ffStrbufCreate();
-                        if (ffFindExecutableInPath(arg0, &tmpPath) == NULL && tmpPath.length < ARRAY_SIZE(exePath)) {
+                        if (ffFindExecutableInPath(arg0, &tmpPath) == nullptr && tmpPath.length < ARRAY_SIZE(exePath)) {
                             memcpy(exePath, tmpPath.chars, tmpPath.length + 1);
                             exePathLen = tmpPath.length;
                         }
@@ -282,7 +282,7 @@ static void getSysinfo(FFPlatformSysinfo* info, const struct utsname* uts) {
 
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__OpenBSD__) || defined(__NetBSD__)
     size_t length = sizeof(info->pageSize);
-    sysctl((int[]) { CTL_HW, HW_PAGESIZE }, 2, &info->pageSize, &length, NULL, 0);
+    sysctl((int[]) { CTL_HW, HW_PAGESIZE }, 2, &info->pageSize, &length, nullptr, 0);
 #else
     info->pageSize = (uint32_t) sysconf(_SC_PAGESIZE);
 #endif
@@ -290,7 +290,7 @@ static void getSysinfo(FFPlatformSysinfo* info, const struct utsname* uts) {
 
 static void getCwd(FFPlatform* platform) {
     char cwd[PATH_MAX];
-    if (getcwd(cwd, sizeof(cwd)) != NULL) {
+    if (getcwd(cwd, sizeof(cwd)) != nullptr) {
         ffStrbufSetS(&platform->cwd, cwd);
         ffStrbufEnsureEndsWithC(&platform->cwd, '/');
     }

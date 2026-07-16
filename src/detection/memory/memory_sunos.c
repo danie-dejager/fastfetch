@@ -15,14 +15,14 @@ const char* ffDetectMemory(FFMemoryResult* ram) {
     ram->bytesTotal = (uint64_t) sysconf(_SC_PHYS_PAGES) * pageSize;
     ram->bytesUsed = ram->bytesTotal - (uint64_t) sysconf(_SC_AVPHYS_PAGES) * pageSize;
 
-    FF_A_CLEANUP(kstatFreeWrap) kstat_ctl_t* kc = kstat_open();
-    if (kc != NULL) {
+    [[gnu::cleanup(kstatFreeWrap)]] kstat_ctl_t* kc = kstat_open();
+    if (kc != nullptr) {
         kstat_t* ksp = kstat_lookup(kc, "zfs", -1, "arcstats");
-        if (ksp != NULL && kstat_read(kc, ksp, NULL) != -1) {
+        if (ksp != nullptr && kstat_read(kc, ksp, nullptr) != -1) {
             kstat_named_t* kn_size = (kstat_named_t*) kstat_data_lookup(ksp, "size");
             kstat_named_t* kn_cmin = (kstat_named_t*) kstat_data_lookup(ksp, "c_min");
 
-            if (kn_size != NULL && kn_cmin != NULL &&
+            if (kn_size != nullptr && kn_cmin != nullptr &&
                 kn_size->data_type == KSTAT_DATA_UINT64 &&
                 kn_cmin->data_type == KSTAT_DATA_UINT64) {
                 uint64_t arcSize = kn_size->value.ui64;
@@ -39,5 +39,5 @@ const char* ffDetectMemory(FFMemoryResult* ram) {
         }
     }
 
-    return NULL;
+    return nullptr;
 }

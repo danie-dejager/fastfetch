@@ -20,7 +20,7 @@ const char* ffDetectWifi(FFlist* result) {
         return "socket() failed";
     }
 
-    for (struct if_nameindex* i = infs; !(i->if_index == 0 && i->if_name == NULL); ++i) {
+    for (struct if_nameindex* i = infs; !(i->if_index == 0 && i->if_name == nullptr); ++i) {
         if (!ffStrStartsWith(i->if_name, "wlan")) {
             continue;
         }
@@ -119,7 +119,7 @@ const char* ffDetectWifi(FFlist* result) {
         }
 
         ireq.i_type = IEEE80211_IOC_AUTHMODE;
-        ireq.i_data = NULL;
+        ireq.i_data = nullptr;
         ireq.i_len = 0;
         if (ioctl(sock, SIOCG80211, &ireq) >= 0) {
             switch (ireq.i_val) {
@@ -159,5 +159,5 @@ const char* ffDetectWifi(FFlist* result) {
     }
 
     if_freenameindex(infs);
-    return NULL;
+    return nullptr;
 }

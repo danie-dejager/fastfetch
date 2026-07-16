@@ -5,26 +5,26 @@
 #ifdef __OpenBSD__
 const char* ffSysctlGetString(int mib1, int mib2, FFstrbuf* result) {
     size_t neededLength;
-    if (sysctl((int[]) { mib1, mib2 }, 2, NULL, &neededLength, NULL, 0) != 0 || neededLength == 1) { // neededLength is 1 for empty strings, because of the null terminator
+    if (sysctl((int[]) { mib1, mib2 }, 2, nullptr, &neededLength, nullptr, 0) != 0 || neededLength == 1) { // neededLength is 1 for empty strings, because of the null terminator
         return "sysctl() length query failed";
     }
 
     ffStrbufEnsureFree(result, (uint32_t) neededLength - 1);
 
-    if (sysctl((int[]) { mib1, mib2 }, 2, result->chars + result->length, &neededLength, NULL, 0) != 0) {
+    if (sysctl((int[]) { mib1, mib2 }, 2, result->chars + result->length, &neededLength, nullptr, 0) != 0) {
         return "sysctl() failed to retrieve string data";
     }
 
     result->length += (uint32_t) neededLength - 1;
     result->chars[result->length] = '\0';
 
-    return NULL;
+    return nullptr;
 }
 
 int ffSysctlGetInt(int mib1, int mib2, int defaultValue) {
     int result;
     size_t neededLength = sizeof(result);
-    if (sysctl((int[]) { mib1, mib2 }, 2, &result, &neededLength, NULL, 0) != 0) {
+    if (sysctl((int[]) { mib1, mib2 }, 2, &result, &neededLength, nullptr, 0) != 0) {
         return defaultValue;
     }
     return result;
@@ -33,7 +33,7 @@ int ffSysctlGetInt(int mib1, int mib2, int defaultValue) {
 int64_t ffSysctlGetInt64(int mib1, int mib2, int64_t defaultValue) {
     int64_t result;
     size_t neededLength = sizeof(result);
-    if (sysctl((int[]) { mib1, mib2 }, 2, &result, &neededLength, NULL, 0) != 0) {
+    if (sysctl((int[]) { mib1, mib2 }, 2, &result, &neededLength, nullptr, 0) != 0) {
         return defaultValue;
     }
     return result;
@@ -41,13 +41,13 @@ int64_t ffSysctlGetInt64(int mib1, int mib2, int64_t defaultValue) {
 #else
 const char* ffSysctlGetString(const char* propName, FFstrbuf* result) {
     size_t neededLength;
-    if (sysctlbyname(propName, NULL, &neededLength, NULL, 0) != 0 || neededLength == 1) { // neededLength is 1 for empty strings, because of the null terminator
+    if (sysctlbyname(propName, nullptr, &neededLength, nullptr, 0) != 0 || neededLength == 1) { // neededLength is 1 for empty strings, because of the null terminator
         return "sysctlbyname() failed";
     }
 
     ffStrbufEnsureFree(result, (uint32_t) neededLength - 1);
 
-    if (sysctlbyname(propName, result->chars + result->length, &neededLength, NULL, 0) != 0) {
+    if (sysctlbyname(propName, result->chars + result->length, &neededLength, nullptr, 0) != 0) {
         return "sysctlbyname() failed to retrieve string data";
     }
 
@@ -55,13 +55,13 @@ const char* ffSysctlGetString(const char* propName, FFstrbuf* result) {
 
     result->chars[result->length] = '\0';
 
-    return NULL;
+    return nullptr;
 }
 
 int ffSysctlGetInt(const char* propName, int defaultValue) {
     int result;
     size_t neededLength = sizeof(result);
-    if (sysctlbyname(propName, &result, &neededLength, NULL, 0) != 0) {
+    if (sysctlbyname(propName, &result, &neededLength, nullptr, 0) != 0) {
         return defaultValue;
     }
     return result;
@@ -70,7 +70,7 @@ int ffSysctlGetInt(const char* propName, int defaultValue) {
 int64_t ffSysctlGetInt64(const char* propName, int64_t defaultValue) {
     int64_t result;
     size_t neededLength = sizeof(result);
-    if (sysctlbyname(propName, &result, &neededLength, NULL, 0) != 0) {
+    if (sysctlbyname(propName, &result, &neededLength, nullptr, 0) != 0) {
         return defaultValue;
     }
     return result;
@@ -78,15 +78,15 @@ int64_t ffSysctlGetInt64(const char* propName, int64_t defaultValue) {
 #endif // OpenBSD
 
 void* ffSysctlGetData(int* request, u_int requestLength, size_t* resultLength) {
-    if (sysctl(request, requestLength, NULL, resultLength, NULL, 0) != 0) {
-        return NULL;
+    if (sysctl(request, requestLength, nullptr, resultLength, nullptr, 0) != 0) {
+        return nullptr;
     }
 
     void* data = malloc(*resultLength);
 
-    if (sysctl(request, requestLength, data, resultLength, NULL, 0) != 0) {
+    if (sysctl(request, requestLength, data, resultLength, nullptr, 0) != 0) {
         free(data);
-        return NULL;
+        return nullptr;
     }
 
     return data;

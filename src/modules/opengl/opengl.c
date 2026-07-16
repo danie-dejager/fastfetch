@@ -85,7 +85,7 @@ void ffGenerateOpenGLJsonConfig(FFOpenGLOptions* options, yyjson_mut_doc* doc, y
     }
 }
 
-bool ffGenerateOpenGLJsonResult(FF_A_UNUSED FFOpenGLOptions* options, yyjson_mut_doc* doc, yyjson_mut_val* module) {
+bool ffGenerateOpenGLJsonResult([[maybe_unused]] FFOpenGLOptions* options, yyjson_mut_doc* doc, yyjson_mut_val* module) {
     bool success = false;
     FFOpenGLResult result;
     ffStrbufInit(&result.version);
@@ -95,7 +95,7 @@ bool ffGenerateOpenGLJsonResult(FF_A_UNUSED FFOpenGLOptions* options, yyjson_mut
     ffStrbufInit(&result.library);
 
     const char* error = ffDetectOpenGL(options, &result);
-    if (error != NULL) {
+    if (error != nullptr) {
         yyjson_mut_obj_add_str(doc, module, "error", error);
     } else {
         yyjson_mut_val* obj = yyjson_mut_obj_add_obj(doc, module, "result");

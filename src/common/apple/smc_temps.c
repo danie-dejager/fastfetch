@@ -86,7 +86,7 @@ static const char* smcCall(io_connect_t conn, uint32_t selector, SmcKeyData_t* i
     if (IOConnectCallStructMethod(conn, selector, inputStructure, size, outputStructure, &size) != kIOReturnSuccess) {
         return "IOConnectCallStructMethod(conn) failed";
     }
-    return NULL;
+    return nullptr;
 }
 
 // Provides key info, using a cache to dramatically improve the energy impact of smcFanControl
@@ -103,7 +103,7 @@ static const char* smcGetKeyInfo(io_connect_t conn, const uint32_t key, SmcKeyDa
     }
 
     *key_info = outputStructure.keyInfo;
-    return NULL;
+    return nullptr;
 }
 
 static const char* smcReadSmcVal(io_connect_t conn, const UInt32Char_t key, SmcVal_t* val) {
@@ -130,7 +130,7 @@ static const char* smcReadSmcVal(io_connect_t conn, const UInt32Char_t key, SmcV
 
     memcpy(val->bytes, outputStructure.bytes, sizeof(outputStructure.bytes));
 
-    return NULL;
+    return nullptr;
 }
 
 static const char* smcOpen(io_connect_t* conn) {
@@ -143,13 +143,13 @@ static const char* smcOpen(io_connect_t* conn) {
         return "IOServiceOpen() failed";
     }
 
-    return NULL;
+    return nullptr;
 }
 
 static const char* smcReadValue(io_connect_t conn, const UInt32Char_t key, double* value) {
     SmcVal_t val = { 0 };
     const char* error = smcReadSmcVal(conn, key, &val);
-    if (error != NULL) {
+    if (error != nullptr) {
         return error;
     }
     if (val.dataSize == 0) {
@@ -270,7 +270,7 @@ static const char* smcReadValue(io_connect_t conn, const UInt32Char_t key, doubl
         default:
             return "Unsupported SMC data type";
     }
-    return NULL;
+    return nullptr;
 }
 
 static bool detectTemp(io_connect_t conn, const char* sensor, double* sum) {
@@ -291,7 +291,7 @@ static io_connect_t conn;
 
 const char* ffDetectSmcSpecificTemp(const char* sensor, double* result) {
     if (!conn) {
-        if (smcOpen(&conn) != NULL) {
+        if (smcOpen(&conn) != nullptr) {
             conn = (io_connect_t) -1;
         }
     }
@@ -303,12 +303,12 @@ const char* ffDetectSmcSpecificTemp(const char* sensor, double* result) {
         return "Could not read SMC temperature";
     }
 
-    return NULL;
+    return nullptr;
 }
 
 const char* ffDetectSmcTemps(enum FFTempType type, double* result) {
     if (!conn) {
-        if (smcOpen(&conn) != NULL) {
+        if (smcOpen(&conn) != nullptr) {
             conn = (io_connect_t) -1;
         }
     }
@@ -461,5 +461,5 @@ const char* ffDetectSmcTemps(enum FFTempType type, double* result) {
 
     *result /= count;
 
-    return NULL;
+    return nullptr;
 }

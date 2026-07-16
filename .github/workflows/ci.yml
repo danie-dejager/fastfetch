@@ -54,15 +54,6 @@ jobs:
     uses: ./.github/workflows/build-linux-armv7l.yml
     secrets: inherit
 
-  linux-armv6l:
-    needs: no-features-test
-    name: Linux-armv6l
-    permissions:
-      security-events: write
-      contents: read
-    uses: ./.github/workflows/build-linux-armv6l.yml
-    secrets: inherit
-
   linux-vms:
     needs: no-features-test
     name: Linux-${{ matrix.arch }}
@@ -197,7 +188,6 @@ jobs:
       - linux-hosts
       - linux-i686
       - linux-armv7l
-      - linux-armv6l
       - linux-vms
       - musl-amd64
       - macos-hosts

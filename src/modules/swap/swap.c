@@ -147,7 +147,7 @@ void ffGenerateSwapJsonConfig(FFSwapOptions* options, yyjson_mut_doc* doc, yyjso
     yyjson_mut_obj_add_bool(doc, module, "separate", options->separate);
 }
 
-bool ffGenerateSwapJsonResult(FF_A_UNUSED FFSwapOptions* options, yyjson_mut_doc* doc, yyjson_mut_val* module) {
+bool ffGenerateSwapJsonResult([[maybe_unused]] FFSwapOptions* options, yyjson_mut_doc* doc, yyjson_mut_val* module) {
     FF_LIST_AUTO_DESTROY result = ffListCreate();
     const char* error = ffDetectSwap(&result);
 

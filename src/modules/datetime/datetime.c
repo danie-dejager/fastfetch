@@ -138,7 +138,7 @@ void ffGenerateDateTimeJsonConfig(FFDateTimeOptions* options, yyjson_mut_doc* do
     ffJsonConfigGenerateModuleArgsConfig(doc, module, &options->moduleArgs);
 }
 
-bool ffGenerateDateTimeJsonResult(FF_A_UNUSED FFDateTimeOptions* options, yyjson_mut_doc* doc, yyjson_mut_val* module) {
+bool ffGenerateDateTimeJsonResult([[maybe_unused]] FFDateTimeOptions* options, yyjson_mut_doc* doc, yyjson_mut_val* module) {
     yyjson_mut_obj_add_strcpy(doc, module, "result", ffTimeToFullStr(ffTimeGetNow()));
     return true;
 }

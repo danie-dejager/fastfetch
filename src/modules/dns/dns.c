@@ -73,7 +73,7 @@ void ffParseDNSJsonObject(FFDNSOptions* options, yyjson_val* module) {
                                                                        {},
                                                                    });
             if (error) {
-                ffPrintError(FF_DNS_MODULE_NAME, 0, NULL, FF_PRINT_TYPE_NO_CUSTOM_KEY, "Invalid %s value: %s", unsafe_yyjson_get_str(key), error);
+                ffPrintError(FF_DNS_MODULE_NAME, 0, nullptr, FF_PRINT_TYPE_NO_CUSTOM_KEY, "Invalid %s value: %s", unsafe_yyjson_get_str(key), error);
             } else {
                 options->showType = (FFDNSShowType) value;
             }

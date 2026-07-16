@@ -769,7 +769,7 @@ int main(void) {
         ffStrbufAppendUtf32CodePoint(&strbuf, 0x6587);
         ffStrbufAppendUtf32CodePoint(&strbuf, 0x6cc9);
         ffStrbufAppendUtf32CodePoint(&strbuf, 0x9a7f);
-        VERIFY(ffStrbufEqualS(&strbuf, u8"文泉驿"));
+        VERIFY(ffStrbufEqualS(&strbuf, (const char*) u8"文泉驿"));
 
         ffStrbufDestroy(&strbuf);
     }

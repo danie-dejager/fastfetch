@@ -1,7 +1,5 @@
 #pragma once
 
-#include "common/attributes.h"
-
 #include <stdbool.h>
 #include <stdint.h>
 #include <assert.h>
@@ -23,33 +21,33 @@ bool ffListPop(FFlist* list, uint32_t elementSize, void* __restrict result);
 static inline void ffListInit(FFlist* list) {
     list->capacity = 0;
     list->length = 0;
-    list->data = NULL;
+    list->data = nullptr;
 }
 
 static inline void ffListInitA(FFlist* list, uint32_t elementSize, uint32_t capacity) {
     ffListInit(list);
     list->capacity = capacity;
-    list->data = __builtin_expect(capacity == 0, 0) ? NULL : (uint8_t*) malloc((size_t) capacity * elementSize);
+    list->data = __builtin_expect(capacity == 0, 0) ? nullptr : (uint8_t*) malloc((size_t) capacity * elementSize);
 }
 
-FF_A_NODISCARD static inline FFlist ffListCreate() {
+[[nodiscard]] static inline FFlist ffListCreate() {
     FFlist result;
     ffListInit(&result);
     return result;
 }
 
-FF_A_NODISCARD static inline FFlist ffListCreateA(uint32_t elementSize, uint32_t capacity) {
+[[nodiscard]] static inline FFlist ffListCreateA(uint32_t elementSize, uint32_t capacity) {
     FFlist result;
     ffListInitA(&result, elementSize, capacity);
     return result;
 }
 
-FF_A_NODISCARD static inline void* ffListGet(const FFlist* list, uint32_t elementSize, uint32_t index) {
+[[nodiscard]] static inline void* ffListGet(const FFlist* list, uint32_t elementSize, uint32_t index) {
     assert(list->capacity > index);
     return list->data + (index * elementSize);
 }
 
-FF_A_NODISCARD static inline uint32_t ffListFirstIndexComp(const FFlist* list, uint32_t elementSize, void* compElement, bool (*compFunc)(const void*, const void*)) {
+[[nodiscard]] static inline uint32_t ffListFirstIndexComp(const FFlist* list, uint32_t elementSize, void* compElement, bool (*compFunc)(const void*, const void*)) {
     for (uint32_t i = 0; i < list->length; i++) {
         if (compFunc(ffListGet(list, elementSize, i), compElement)) {
             return i;
@@ -59,7 +57,7 @@ FF_A_NODISCARD static inline uint32_t ffListFirstIndexComp(const FFlist* list, u
     return list->length;
 }
 
-FF_A_NODISCARD static inline bool ffListContains(const FFlist* list, uint32_t elementSize, void* compElement, bool (*compFunc)(const void*, const void*)) {
+[[nodiscard]] static inline bool ffListContains(const FFlist* list, uint32_t elementSize, void* compElement, bool (*compFunc)(const void*, const void*)) {
     return ffListFirstIndexComp(list, elementSize, compElement, compFunc) != list->length;
 }
 
@@ -87,7 +85,7 @@ static inline void ffListDestroy(FFlist* list) {
     // Avoid free-after-use. These 3 assignments are cheap so don't remove them
     list->capacity = list->length = 0;
     free(list->data);
-    list->data = NULL;
+    list->data = nullptr;
 }
 
 static inline void ffListClear(FFlist* list) {
@@ -117,7 +115,7 @@ static inline void* ffListAdd(FFlist* list, uint32_t elementSize) {
         itemVarName - (itemType*) (listVar).data < (intptr_t) (listVar).length; \
         ++itemVarName)
 
-#define FF_LIST_AUTO_DESTROY FFlist FF_A_CLEANUP(ffListDestroy)
+#define FF_LIST_AUTO_DESTROY [[gnu::cleanup(ffListDestroy)]] FFlist
 
 #define FF_LIST_GET(itemType, listVar, index) \
     ({                                        \
@@ -136,9 +134,9 @@ static inline void* ffListAdd(FFlist* list, uint32_t elementSize) {
 
 #define FF_LIST_CONTAINS(listVar, pCompElement, compFunc)                                                                              \
     ({                                                                                                                                 \
-        typedef __typeof__(*(pCompElement)) compElementType;                                                                           \
+        typedef typeof(*(pCompElement)) compElementType;                                                                           \
         typedef bool compFuncType(const compElementType*, const compElementType*);                                                     \
-        static_assert(__builtin_types_compatible_p(__typeof__(compFunc), compFuncType), "Incompatible callback function");             \
+        static_assert(__builtin_types_compatible_p(typeof(compFunc), compFuncType), "Incompatible callback function");             \
         ffListContains(&(listVar), (uint32_t) sizeof(*(pCompElement)), (pCompElement), (bool (*)(const void*, const void*)) compFunc); \
     })
 

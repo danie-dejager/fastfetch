@@ -19,7 +19,7 @@ void ffPreparePublicIp(FFPublicIPOptions* options) {
     if (options->url.length == 0) {
         state->compression = true;
         state->tfo = true;
-        *status = ffNetworkingSendHttpRequest(state, options->ipv6 ? "v6.ipinfo.io" : "ipinfo.io", "/json", NULL);
+        *status = ffNetworkingSendHttpRequest(state, options->ipv6 ? "v6.ipinfo.io" : "ipinfo.io", "/json", nullptr);
     } else {
         FF_STRBUF_AUTO_DESTROY host = ffStrbufCreateCopy(&options->url);
         uint32_t hostStartIndex = ffStrbufFirstIndexS(&host, "://");
@@ -39,7 +39,7 @@ void ffPreparePublicIp(FFPublicIPOptions* options) {
             host.chars[pathStartIndex] = '\0';
         }
 
-        *status = ffNetworkingSendHttpRequest(state, host.chars, path.length == 0 ? "/" : path.chars, NULL);
+        *status = ffNetworkingSendHttpRequest(state, host.chars, path.length == 0 ? "/" : path.chars, nullptr);
     }
 }
 
@@ -57,7 +57,7 @@ const char* ffDetectPublicIp(FFPublicIPOptions* options, FFPublicIpResult* resul
         ffPreparePublicIp(options);
     }
 
-    if (*status != NULL) {
+    if (*status != nullptr) {
         return *status;
     }
 
@@ -67,7 +67,7 @@ const char* ffDetectPublicIp(FFPublicIPOptions* options, FFPublicIpResult* resul
     *state = (FFNetworkingState) {};
     *status = FF_UNINITIALIZED;
 
-    if (error == NULL) {
+    if (error == nullptr) {
         ffStrbufSubstrAfterFirstS(&response, "\r\n\r\n");
     } else {
         return error;
@@ -78,18 +78,18 @@ const char* ffDetectPublicIp(FFPublicIPOptions* options, FFPublicIpResult* resul
     }
 
     if (options->url.length == 0) {
-        yyjson_doc* FF_A_CLEANUP(wrapYyjsonFree) doc = yyjson_read_opts(response.chars, response.length, 0, NULL, NULL);
+        [[gnu::cleanup(wrapYyjsonFree)]] yyjson_doc* doc = yyjson_read_opts(response.chars, response.length, 0, nullptr, nullptr);
         if (doc) {
             yyjson_val* root = yyjson_doc_get_root(doc);
             ffStrbufAppendJsonVal(&result->ip, yyjson_obj_get(root, "ip"));
             ffStrbufDestroy(&result->location);
             ffStrbufInitF(&result->location, "%s, %s", yyjson_get_str(yyjson_obj_get(root, "city")), yyjson_get_str(yyjson_obj_get(root, "country")));
-            return NULL;
+            return nullptr;
         }
     }
 
     ffStrbufDestroy(&result->ip);
     ffStrbufInitMove(&result->ip, &response);
     ffStrbufTrimRightSpace(&result->ip);
-    return NULL;
+    return nullptr;
 }

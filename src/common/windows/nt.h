@@ -604,7 +604,7 @@ typedef struct _KUSER_SHARED_DATA {
 
 #ifdef __aarch64__
     #define SharedUserData ({                                                                        \
-        __auto_type shared_user_data = (const volatile KUSER_SHARED_DATA*) (uintptr_t) 0x7FFE0000UL; \
+        auto shared_user_data = (const volatile KUSER_SHARED_DATA*) (uintptr_t) 0x7FFE0000UL; \
         __asm__("" : "+r"(shared_user_data)); /* https://github.com/lhmouse/mcfgthread/issues/330 */ \
         shared_user_data;                                                                            \
     })

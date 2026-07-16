@@ -61,7 +61,7 @@ static const struct nlattr* ffWifiNlAttrNext(const struct nlattr* attr, size_t* 
     size_t alignedLen = NLA_ALIGN(attr->nla_len);
     if (alignedLen > *remaining) {
         *remaining = 0;
-        return NULL;
+        return nullptr;
     }
 
     *remaining -= alignedLen;
@@ -131,7 +131,7 @@ static bool ffWifiNlGetFamilyId(FFWifiNlContext* ctx) {
 
     uint8_t buffer[8192];
     while (true) {
-        ssize_t received = recvfrom(ctx->sockFd, buffer, sizeof(buffer), 0, NULL, NULL);
+        ssize_t received = recvfrom(ctx->sockFd, buffer, sizeof(buffer), 0, nullptr, nullptr);
         if (received < 0) {
             FF_DEBUG("Failed to receive nl80211 family reply: %s", strerror(errno));
             return false;
@@ -502,7 +502,7 @@ static bool ffWifiFetchScanInfo(FFWifiNlContext* ctx, FFWifiResult* item, uint32
 
     uint8_t buffer[1024 * 16];
     while (true) {
-        ssize_t received = recvfrom(ctx->sockFd, buffer, sizeof(buffer), 0, NULL, NULL);
+        ssize_t received = recvfrom(ctx->sockFd, buffer, sizeof(buffer), 0, nullptr, nullptr);
         if (received < 0) {
             FF_DEBUG("Failed to receive nl80211 scan reply: %s", strerror(errno));
             return false;
@@ -617,7 +617,7 @@ static bool ffWifiFetchStationInfo(FFWifiNlContext* ctx, FFWifiResult* item, uin
     uint8_t buffer[8192];
     bool gotStation = false;
     while (true) {
-        ssize_t received = recvfrom(ctx->sockFd, buffer, sizeof(buffer), 0, NULL, NULL);
+        ssize_t received = recvfrom(ctx->sockFd, buffer, sizeof(buffer), 0, nullptr, nullptr);
         if (received < 0) {
             FF_DEBUG("Failed to receive nl80211 station reply: %s", strerror(errno));
             return gotStation;
@@ -690,7 +690,7 @@ static const char* detectWithNetlink(FFWifiNlContext* ctx, FFWifiResult* item, u
     }
 
     FF_DEBUG("Netlink wifi detection completed");
-    return NULL;
+    return nullptr;
 }
 #endif
 
@@ -884,7 +884,7 @@ static const char* detectWithIoctl(FFWifiIcContext* ctx, FFWifiResult* item, cha
     }
 
     FF_DEBUG("Ioctl wifi detection completed");
-    return NULL;
+    return nullptr;
 }
 
 const char* ffDetectWifi(FFlist* result) {
@@ -903,7 +903,7 @@ const char* ffDetectWifi(FFlist* result) {
 
     FF_STRBUF_AUTO_DESTROY buffer = ffStrbufCreate();
 
-    for (struct if_nameindex* i = infs; !(i->if_index == 0 && i->if_name == NULL); ++i) {
+    for (struct if_nameindex* i = infs; !(i->if_index == 0 && i->if_name == nullptr); ++i) {
         FF_DEBUG("Checking interface: %s (index: %u)", i->if_name, i->if_index);
         ffStrbufSetF(&buffer, "/sys/class/net/%s/phy80211/", i->if_name);
         if (!ffPathExists(buffer.chars, FF_PATHTYPE_DIRECTORY)) {
@@ -952,7 +952,7 @@ const char* ffDetectWifi(FFlist* result) {
             }
             flags[len] = '\0';
 
-            unsigned flagsVal = (unsigned) strtoul(flags, NULL, 16); // parse /sys flags as hexadecimal
+            unsigned flagsVal = (unsigned) strtoul(flags, nullptr, 16); // parse /sys flags as hexadecimal
             if (flagsVal & IFF_UP) {
                 ffStrbufSetStatic(&item->inf.status, "up");
             } else {
@@ -972,5 +972,5 @@ const char* ffDetectWifi(FFlist* result) {
     }
 
     FF_DEBUG("Wifi detection completed, found %u wifi interfaces", result->length);
-    return NULL;
+    return nullptr;
 }

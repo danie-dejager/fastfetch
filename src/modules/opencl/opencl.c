@@ -8,7 +8,7 @@
 bool ffPrintOpenCL(FFOpenCLOptions* options) {
     FFOpenCLResult* result = ffDetectOpenCL();
 
-    if (result->error != NULL) {
+    if (result->error != nullptr) {
         ffPrintError(FF_OPENCL_MODULE_NAME, 0, &options->moduleArgs, FF_PRINT_TYPE_DEFAULT, "%s", result->error);
         return false;
     }
@@ -43,10 +43,10 @@ void ffGenerateOpenCLJsonConfig(FFOpenCLOptions* options, yyjson_mut_doc* doc, y
     ffJsonConfigGenerateModuleArgsConfig(doc, module, &options->moduleArgs);
 }
 
-bool ffGenerateOpenCLJsonResult(FF_A_UNUSED FFOpenCLOptions* options, yyjson_mut_doc* doc, yyjson_mut_val* module) {
+bool ffGenerateOpenCLJsonResult([[maybe_unused]] FFOpenCLOptions* options, yyjson_mut_doc* doc, yyjson_mut_val* module) {
     FFOpenCLResult* result = ffDetectOpenCL();
 
-    if (result->error != NULL) {
+    if (result->error != nullptr) {
         yyjson_mut_obj_add_str(doc, module, "error", result->error);
         return false;
     }

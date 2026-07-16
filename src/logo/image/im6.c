@@ -3,7 +3,10 @@
     #include "image.h"
     #include "common/library.h"
 
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wimplicit-int-float-conversion"
     #include <magick/MagickCore.h>
+    #pragma GCC diagnostic pop
 
 static FF_LIBRARY_SYMBOL(ResizeImage)
 
@@ -25,7 +28,7 @@ FFLogoImageResult ffLogoPrintImageIM6(FFLogoRequestData* requestData) {
                                                                      .library = imageMagick,
                                                                  });
 
-    imageMagick = NULL; // leak imageMagick to prevent fastfetch from crashing #552
+    imageMagick = nullptr; // leak imageMagick to prevent fastfetch from crashing #552
     return result;
 }
 

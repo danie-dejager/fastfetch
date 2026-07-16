@@ -20,14 +20,14 @@ void ffPrepareNetIO(FFNetIOOptions* options) {
 }
 
 const char* ffDetectNetIO(FFlist* result, FFNetIOOptions* options) {
-    const char* error = NULL;
+    const char* error = nullptr;
 
     if (options->detectTotal) {
         error = ffNetIOGetIoCounters(result, options);
         if (error) {
             return error;
         }
-        return NULL;
+        return nullptr;
     }
 
     if (time1 == 0) {
@@ -77,5 +77,5 @@ const char* ffDetectNetIO(FFlist* result, FFNetIOOptions* options) {
     }
     time1 = time2;
 
-    return NULL;
+    return nullptr;
 }

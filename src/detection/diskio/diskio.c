@@ -22,14 +22,14 @@ void ffPrepareDiskIO(FFDiskIOOptions* options) {
 }
 
 const char* ffDetectDiskIO(FFlist* result, FFDiskIOOptions* options) {
-    const char* error = NULL;
+    const char* error = nullptr;
 
     if (options->detectTotal) {
         error = ffDiskIOGetIoCounters(result, options);
         if (error) {
             return error;
         }
-        return NULL;
+        return nullptr;
     }
 
     if (time1 == 0) {
@@ -84,5 +84,5 @@ const char* ffDetectDiskIO(FFlist* result, FFDiskIOOptions* options) {
     time1 = time2;
     // Leak ioCounters1 here
 
-    return NULL;
+    return nullptr;
 }

@@ -15,9 +15,9 @@
 #include <ctype.h>
 #include <string.h>
 
-FF_A_COLD
+[[gnu::cold]]
 static void printCommandFormatHelpJson(void) {
-    yyjson_mut_doc* doc = yyjson_mut_doc_new(NULL);
+    yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
     yyjson_mut_val* root = yyjson_mut_obj(doc);
     yyjson_mut_doc_set_root(doc, root);
 
@@ -45,12 +45,12 @@ static void printCommandFormatHelpJson(void) {
             }
         }
     }
-    yyjson_mut_write_fp(stdout, doc, YYJSON_WRITE_PRETTY, NULL, NULL);
+    yyjson_mut_write_fp(stdout, doc, YYJSON_WRITE_PRETTY, nullptr, nullptr);
     putchar('\n');
     yyjson_mut_doc_free(doc);
 }
 
-FF_A_COLD
+[[gnu::cold]]
 static void printCommandFormatHelp(const char* command) {
     FF_STRBUF_AUTO_DESTROY type = ffStrbufCreateNS((uint32_t) (strlen(command) - strlen("-format")), command);
     ffStrbufLowerCase(&type);
@@ -87,7 +87,7 @@ static void printCommandFormatHelp(const char* command) {
     fprintf(stderr, "Error: Module '%s' is not supported\n", type.chars);
 }
 
-FF_A_COLD
+[[gnu::cold]]
 static void printFullHelp() {
     fputs("Fastfetch is a neofetch-like tool for fetching system information and displaying them in a pretty way\n\n", stdout);
     if (!instance.config.display.pipe) {
@@ -194,7 +194,7 @@ For detailed information on logo options, module configuration, and formatting, 
       https://github.com/fastfetch-cli/fastfetch/wiki/Configuration");
 }
 
-FF_A_COLD
+[[gnu::cold]]
 static bool printSpecificCommandHelp(const char* command) {
     yyjson_doc* doc = yyjson_read(FASTFETCH_DATATEXT_JSON_HELP, strlen(FASTFETCH_DATATEXT_JSON_HELP), YYJSON_READ_NOFLAG);
     assert(doc);
@@ -305,9 +305,9 @@ static bool printSpecificCommandHelp(const char* command) {
     return false;
 }
 
-FF_A_COLD
+[[gnu::cold]]
 static void printCommandHelp(const char* command) {
-    if (command == NULL) {
+    if (command == nullptr) {
         printFullHelp();
     } else if (ffStrEqualsIgnCase(command, "format-json")) {
         printCommandFormatHelpJson();
@@ -318,7 +318,7 @@ static void printCommandHelp(const char* command) {
     }
 }
 
-FF_A_COLD
+[[gnu::cold]]
 static void listAvailablePresets(bool pretty) {
     FF_LIST_FOR_EACH (FFstrbuf, path, instance.state.platform.dataDirs) {
         ffStrbufAppendS(path, "fastfetch/presets/");
@@ -333,7 +333,7 @@ static void listAvailablePresets(bool pretty) {
     }
 }
 
-FF_A_COLD
+[[gnu::cold]]
 static void listAvailableLogos(void) {
     FF_LIST_FOR_EACH (FFstrbuf, path, instance.state.platform.dataDirs) {
         ffStrbufAppendS(path, "fastfetch/logos/");
@@ -341,7 +341,7 @@ static void listAvailableLogos(void) {
     }
 }
 
-FF_A_COLD
+[[gnu::cold]]
 static void listConfigPaths(void) {
     FF_LIST_FOR_EACH (FFstrbuf, folder, instance.state.platform.configDirs) {
         bool exists = false;
@@ -353,7 +353,7 @@ static void listConfigPaths(void) {
     }
 }
 
-FF_A_COLD
+[[gnu::cold]]
 static void listDataPaths(void) {
     FF_LIST_FOR_EACH (FFstrbuf, folder, instance.state.platform.dataDirs) {
         ffStrbufAppendS(folder, "fastfetch/");
@@ -361,7 +361,7 @@ static void listDataPaths(void) {
     }
 }
 
-FF_A_COLD
+[[gnu::cold]]
 static void listModules(bool pretty) {
     unsigned count = 0;
     for (int i = 0; i <= 'Z' - 'A'; ++i) {
@@ -382,15 +382,15 @@ static bool parseJsoncFile(FFdata* data, const char* path, yyjson_read_flag flg)
     {
         yyjson_read_err error;
         data->configDoc = path
-            ? yyjson_read_file(path, flg, NULL, &error)
-            : yyjson_read_fp(stdin, flg, NULL, &error);
+            ? yyjson_read_file(path, flg, nullptr, &error)
+            : yyjson_read_fp(stdin, flg, nullptr, &error);
         if (!data->configDoc) {
             if (error.code != YYJSON_READ_ERROR_FILE_OPEN) {
                 if (path) {
                     size_t row = 0, col = error.pos;
                     FF_STRBUF_AUTO_DESTROY content = ffStrbufCreate();
                     if (ffAppendFileBuffer(path, &content)) {
-                        yyjson_locate_pos(content.chars, content.length, error.pos, &row, &col, NULL);
+                        yyjson_locate_pos(content.chars, content.length, error.pos, &row, &col, nullptr);
                     }
                     fprintf(stderr, "Error: failed to parse JSON config file `%s` at (%zu, %zu): %s\n", path, row, col, error.msg);
                 } else {
@@ -410,9 +410,9 @@ static bool parseJsoncFile(FFdata* data, const char* path, yyjson_read_flag flg)
             exit(477);
         }
 
-        yyjson_val* problematicKey = NULL;
-        const char* error = NULL;
-        const char* problematicModule = NULL;
+        yyjson_val* problematicKey = nullptr;
+        const char* error = nullptr;
+        const char* problematicModule = nullptr;
         if (
             error ||
             ((error = ffOptionsParseLogoJsonConfig(&instance.config.logo, root, &problematicKey)) && (problematicModule = "logo")) ||
@@ -431,7 +431,7 @@ static bool parseJsoncFile(FFdata* data, const char* path, yyjson_read_flag flg)
     return true;
 }
 
-FF_A_COLD
+[[gnu::cold]]
 static void generateConfigFile(FFdata* data, bool force, const char* filePath, bool fullConfig) {
     if (data->resultDoc) {
         fprintf(stderr, "Error: duplicated `--gen-config` or `--format json` flags found\n");
@@ -458,7 +458,7 @@ static void generateConfigFile(FFdata* data, bool force, const char* filePath, b
     }
 
     data->docType = fullConfig ? FF_RESULT_DOC_TYPE_CONFIG_FULL : FF_RESULT_DOC_TYPE_CONFIG;
-    data->resultDoc = yyjson_mut_doc_new(NULL);
+    data->resultDoc = yyjson_mut_doc_new(nullptr);
 }
 
 static void optionParseConfigFile(FFdata* data, const char* key, const char* value) {
@@ -469,7 +469,7 @@ static void optionParseConfigFile(FFdata* data, const char* key, const char* val
 
     data->configLoaded = true;
 
-    if (value == NULL) {
+    if (value == nullptr) {
         fprintf(stderr, "Error: usage: %s <config>\n", key);
         exit(413);
     }
@@ -479,7 +479,7 @@ static void optionParseConfigFile(FFdata* data, const char* key, const char* val
     }
 
     if (value[0] == '-' && value[1] == '\0') {
-        parseJsoncFile(data, NULL, false);
+        parseJsoncFile(data, nullptr, false);
         return;
     }
 
@@ -569,7 +569,7 @@ static void optionParseConfigFile(FFdata* data, const char* key, const char* val
     exit(414);
 }
 
-FF_A_COLD
+[[gnu::cold]]
 static void printVersion() {
     FFVersionResult* result = &ffVersionResult;
     printf("%s %s%s%s (%s)\n", result->projectName, result->version, result->versionTweak, result->debugMode ? "-debug" : "", result->architecture);
@@ -581,7 +581,7 @@ static void enableJsonOutput(FFdata* data) {
         exit(477);
     }
 
-    data->resultDoc = yyjson_mut_doc_new(NULL);
+    data->resultDoc = yyjson_mut_doc_new(nullptr);
     data->docType = FF_RESULT_DOC_TYPE_JSON;
     yyjson_mut_doc_set_root(data->resultDoc, yyjson_mut_arr(data->resultDoc));
 }
@@ -741,7 +741,7 @@ static void parseArguments(FFdata* data, int argc, char** argv, void (*parser)(F
         if (i == argc - 1 || (argv[i + 1][0] == '-' && argv[i + 1][1] != '\0' &&    // `-` is used as an alias for `/dev/stdin`
                                  !ffStrEqualsIgnCase(argv[i], "--separator-string") // Separator string can start with a -
                                  )) {
-            parser(data, argv[i], NULL);
+            parser(data, argv[i], nullptr);
         } else {
             parser(data, argv[i], argv[i + 1]);
             ++i;
@@ -800,7 +800,7 @@ static void run(FFdata* data) {
     }
 
     if (data->resultDoc) {
-        yyjson_mut_write_fp(stdout, data->resultDoc, YYJSON_WRITE_INF_AND_NAN_AS_NULL | YYJSON_WRITE_PRETTY_TWO_SPACES | YYJSON_WRITE_NEWLINE_AT_END, NULL, NULL);
+        yyjson_mut_write_fp(stdout, data->resultDoc, YYJSON_WRITE_INF_AND_NAN_AS_NULL | YYJSON_WRITE_PRETTY_TWO_SPACES | YYJSON_WRITE_NEWLINE_AT_END, nullptr, nullptr);
     } else {
         if (instance.config.logo.printRemaining) {
             ffLogoPrintRemaining();
@@ -809,7 +809,7 @@ static void run(FFdata* data) {
     }
 }
 
-FF_A_COLD
+[[gnu::cold]]
 static void writeConfigFile(FFdata* data) {
     const FFstrbuf* filename = &data->genConfigPath;
 
@@ -826,7 +826,7 @@ static void writeConfigFile(FFdata* data) {
     ffMigrateCommandOptionToJsonc(data);
 
     if (ffStrbufEqualS(filename, "-")) {
-        yyjson_mut_write_fp(stdout, doc, YYJSON_WRITE_INF_AND_NAN_AS_NULL | YYJSON_WRITE_PRETTY_TWO_SPACES | YYJSON_WRITE_NEWLINE_AT_END, NULL, NULL);
+        yyjson_mut_write_fp(stdout, doc, YYJSON_WRITE_INF_AND_NAN_AS_NULL | YYJSON_WRITE_PRETTY_TWO_SPACES | YYJSON_WRITE_NEWLINE_AT_END, nullptr, nullptr);
     } else {
         size_t len;
         FF_AUTO_FREE const char* str = yyjson_mut_write(doc, YYJSON_WRITE_INF_AND_NAN_AS_NULL | YYJSON_WRITE_PRETTY_TWO_SPACES | YYJSON_WRITE_NEWLINE_AT_END, &len);

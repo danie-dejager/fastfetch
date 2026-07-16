@@ -30,7 +30,7 @@ static struct trace_event {
 } events[4 * 1024 * 1024]; // 4M events, 96 MiB memory usage
 static _Atomic uint32_t event_count;
 
-__attribute__((no_instrument_function, always_inline)) static inline uint64_t get_time_us() {
+[[gnu::no_instrument_function, gnu::always_inline]] static inline uint64_t get_time_us() {
 #if !_WIN32
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
@@ -43,12 +43,12 @@ __attribute__((no_instrument_function, always_inline)) static inline uint64_t ge
 }
 
 #if _WIN32
-__attribute__((constructor, no_instrument_function)) void trace_init() {
+[[gnu::constructor, gnu::no_instrument_function]] void trace_init() {
     QueryPerformanceFrequency(&freq);
 }
 #endif
 
-__attribute__((destructor, no_instrument_function)) void trace_fini() {
+[[gnu::destructor, gnu::no_instrument_function]] void trace_fini() {
 #if _WIN32
     uint32_t pid = (uint32_t) GetCurrentProcessId();
 #else
@@ -67,10 +67,10 @@ __attribute__((destructor, no_instrument_function)) void trace_fini() {
 
 #if _WIN32
     SymSetOptions(SYMOPT_DEFERRED_LOADS | SYMOPT_UNDNAME);
-    SymInitialize(NtCurrentProcess(), NULL, TRUE);
+    SymInitialize(NtCurrentProcess(), nullptr, TRUE);
 #endif
 
-    const char* fnName = NULL;
+    const char* fnName = nullptr;
 
     uint32_t count = atomic_load_explicit(&event_count, memory_order_acquire);
     for (uint32_t i = 0; i < count; ++i) {
@@ -115,7 +115,7 @@ __attribute__((destructor, no_instrument_function)) void trace_fini() {
 #endif
 }
 
-__attribute__((no_instrument_function)) static void write_event(void* this_fn, bool is_exit) {
+[[gnu::no_instrument_function]] static void write_event(void* this_fn, bool is_exit) {
     uint32_t idx = atomic_fetch_add_explicit(&event_count, 1, memory_order_relaxed);
     if (__builtin_expect(idx >= sizeof(events) / sizeof(events[0]), false)) {
         abort();
@@ -137,12 +137,12 @@ __attribute__((no_instrument_function)) static void write_event(void* this_fn, b
     }
 }
 
-__attribute__((no_instrument_function)) void __cyg_profile_func_enter(void* this_fn, void* call_site) {
+[[gnu::no_instrument_function]] void __cyg_profile_func_enter(void* this_fn, void* call_site) {
     (void) call_site;
     write_event(this_fn, false);
 }
 
-__attribute__((no_instrument_function)) void __cyg_profile_func_exit(void* this_fn, void* call_site) {
+[[gnu::no_instrument_function]] void __cyg_profile_func_exit(void* this_fn, void* call_site) {
     (void) call_site;
     write_event(this_fn, true);
 }

@@ -156,7 +156,7 @@ static bool printImageKittyIcat(bool printError) {
 
     uint32_t prevLength = buf.length;
 
-    const char* error = NULL;
+    const char* error = nullptr;
 
     if (options->width) {
         char place[64];
@@ -176,7 +176,7 @@ static bool printImageKittyIcat(bool printError) {
                                                 place,
                                                 "--scale-up",
                                                 options->source.chars,
-                                                NULL,
+                                                nullptr,
                                             });
     } else {
         error = ffProcessAppendStdOut(&buf, (char*[]) {
@@ -185,7 +185,7 @@ static bool printImageKittyIcat(bool printError) {
                                                 "-n",
                                                 "--align=left",
                                                 options->source.chars,
-                                                NULL,
+                                                nullptr,
                                             });
     }
     if (error) {
@@ -374,7 +374,7 @@ static bool compressBlob(void** blob, size_t* length) {
 
     uLong compressedLength = ffcompressBound(*length);
     void* compressed = malloc(compressedLength);
-    if (compressed == NULL) {
+    if (compressed == nullptr) {
         return false;
     }
 
@@ -392,12 +392,15 @@ static bool compressBlob(void** blob, size_t* length) {
 
     #endif // FF_HAVE_ZLIB
 
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wimplicit-int-float-conversion"
     // We use only the defines from here, that are exactly the same in both versions
     #ifdef FF_HAVE_IMAGEMAGICK7
         #include <MagickCore/MagickCore.h>
     #else
         #include <magick/MagickCore.h>
     #endif
+    #pragma GCC diagnostic pop
 
 typedef struct ImageData {
     FF_LIBRARY_SYMBOL(CopyMagickString)
@@ -410,7 +413,7 @@ typedef struct ImageData {
 } ImageData;
 
 static inline bool checkAllocationResult(void* data, size_t length) {
-    if (data == NULL) {
+    if (data == nullptr) {
         return false;
     }
 
@@ -578,7 +581,7 @@ static bool printImageChafa(FFLogoRequestData* requestData, const ImageData* ima
     }
 
     ChafaSymbolMap* symbolMap = ffchafa_symbol_map_new();
-    GError* error = NULL;
+    GError* error = nullptr;
     if (!ffchafa_symbol_map_apply_selectors(symbolMap, instance.config.logo.chafaSymbols.chars, &error)) {
         fputs(error->message, stderr);
     }
@@ -621,7 +624,7 @@ static bool printImageChafa(FFLogoRequestData* requestData, const ImageData* ima
         (gint) imageData->image->rows,
         (gint) imageData->image->columns * 4);
 
-    GString* str = ffchafa_canvas_print(canvas, NULL);
+    GString* str = ffchafa_canvas_print(canvas, nullptr);
     FFstrbuf result;
     result.allocated = (uint32_t) str->allocated_len;
     result.length = (uint32_t) str->len;
@@ -666,16 +669,16 @@ FFLogoImageResult ffLogoPrintImageImpl(FFLogoRequestData* requestData, const FFI
     FF_LIBRARY_LOAD_SYMBOL_VAR(imData->library, imageData, ImageToBlob, FF_LOGO_IMAGE_RESULT_INIT_ERROR)
     FF_LIBRARY_LOAD_SYMBOL_VAR(imData->library, imageData, Base64Encode, FF_LOGO_IMAGE_RESULT_INIT_ERROR)
 
-    ffMagickCoreGenesis(NULL, MagickFalse);
+    ffMagickCoreGenesis(nullptr, MagickFalse);
 
     imageData.exceptionInfo = ffAcquireExceptionInfo();
-    if (imageData.exceptionInfo == NULL) {
+    if (imageData.exceptionInfo == nullptr) {
         ffMagickCoreTerminus();
         return FF_LOGO_IMAGE_RESULT_RUN_ERROR;
     }
 
     ImageInfo* imageInfoIn = ffAcquireImageInfo();
-    if (imageInfoIn == NULL) {
+    if (imageInfoIn == nullptr) {
         ffDestroyExceptionInfo(imageData.exceptionInfo);
         ffMagickCoreTerminus();
         return FF_LOGO_IMAGE_RESULT_RUN_ERROR;
@@ -686,7 +689,7 @@ FFLogoImageResult ffLogoPrintImageImpl(FFLogoRequestData* requestData, const FFI
 
     imageData.image = ffReadImage(imageInfoIn, imageData.exceptionInfo);
     ffDestroyImageInfo(imageInfoIn);
-    if (imageData.image == NULL) {
+    if (imageData.image == nullptr) {
         ffDestroyExceptionInfo(imageData.exceptionInfo);
         ffMagickCoreTerminus();
         return FF_LOGO_IMAGE_RESULT_RUN_ERROR;
@@ -713,7 +716,7 @@ FFLogoImageResult ffLogoPrintImageImpl(FFLogoRequestData* requestData, const FFI
 
     Image* resized = imData->resizeFunc(imageData.image, requestData->logoPixelWidth, requestData->logoPixelHeight, imageData.exceptionInfo);
     ffDestroyImage(imageData.image);
-    if (resized == NULL) {
+    if (resized == nullptr) {
         ffDestroyExceptionInfo(imageData.exceptionInfo);
         ffMagickCoreTerminus();
         return FF_LOGO_IMAGE_RESULT_RUN_ERROR;
@@ -721,7 +724,7 @@ FFLogoImageResult ffLogoPrintImageImpl(FFLogoRequestData* requestData, const FFI
     imageData.image = resized;
 
     imageData.imageInfo = ffAcquireImageInfo();
-    if (imageData.imageInfo == NULL) {
+    if (imageData.imageInfo == nullptr) {
         ffDestroyImage(imageData.image);
         ffDestroyExceptionInfo(imageData.exceptionInfo);
         ffMagickCoreTerminus();
@@ -757,7 +760,7 @@ static FFNativeFD getCacheFD(FFLogoRequestData* requestData, const char* fileNam
         #endif
     );
     #else
-    HANDLE fd = CreateFileA(requestData->cacheDir.chars, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    HANDLE fd = CreateFileA(requestData->cacheDir.chars, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
     #endif
     ffStrbufSubstrBefore(&requestData->cacheDir, cacheDirLength);
     return fd;
@@ -843,7 +846,7 @@ static bool printCachedPixel(FFLogoRequestData* requestData) {
     struct stat st;
     if (fstat(fd, &st) >= 0) {
         while (st.st_size > 0) {
-            ssize_t bytes = sendfile(STDOUT_FILENO, fd, NULL, (size_t) st.st_size);
+            ssize_t bytes = sendfile(STDOUT_FILENO, fd, nullptr, (size_t) st.st_size);
             if (bytes > 0) {
                 sent = true;
                 st.st_size -= bytes;
@@ -921,7 +924,7 @@ static bool printImageIfExistsSlowPath(FFLogoType type, bool printError) {
 
     ffStrbufEnsureFree(&requestData.cacheDir, PATH_MAX);
     char* filePath = requestData.cacheDir.chars + requestData.cacheDir.length;
-    if (realpath(instance.config.logo.source.chars, filePath) == NULL) {
+    if (realpath(instance.config.logo.source.chars, filePath) == nullptr) {
         // We can safely return here, because if realpath failed, we surely won't be able to read the file
         ffStrbufDestroy(&requestData.cacheDir);
         if (printError) {

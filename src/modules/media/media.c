@@ -211,7 +211,7 @@ void ffGenerateMediaJsonConfig(FFMediaOptions* options, yyjson_mut_doc* doc, yyj
     ffPercentGenerateJsonConfig(doc, module, options->percent);
 }
 
-bool ffGenerateMediaJsonResult(FF_A_UNUSED FFMediaOptions* options, yyjson_mut_doc* doc, yyjson_mut_val* module) {
+bool ffGenerateMediaJsonResult([[maybe_unused]] FFMediaOptions* options, yyjson_mut_doc* doc, yyjson_mut_val* module) {
     const FFMediaResult* media = ffDetectMedia(false);
 
     if (media->error.length > 0) {

@@ -412,7 +412,7 @@ bool ffGenerateGPUJsonResult(FFGPUOptions* options, yyjson_mut_doc* doc, yyjson_
                 type = "Discrete";
                 break;
             default:
-                type = NULL;
+                type = nullptr;
                 break;
         }
         if (type) {

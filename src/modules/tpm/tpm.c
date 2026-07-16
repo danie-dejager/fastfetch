@@ -52,7 +52,7 @@ void ffGenerateTPMJsonConfig(FFTPMOptions* options, yyjson_mut_doc* doc, yyjson_
     ffJsonConfigGenerateModuleArgsConfig(doc, module, &options->moduleArgs);
 }
 
-bool ffGenerateTPMJsonResult(FF_A_UNUSED FFTPMOptions* options, yyjson_mut_doc* doc, yyjson_mut_val* module) {
+bool ffGenerateTPMJsonResult([[maybe_unused]] FFTPMOptions* options, yyjson_mut_doc* doc, yyjson_mut_val* module) {
     FFTPMResult result = {
         .version = ffStrbufCreate(),
         .description = ffStrbufCreate()

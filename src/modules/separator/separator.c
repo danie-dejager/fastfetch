@@ -95,11 +95,11 @@ void ffParseSeparatorJsonObject(FFSeparatorOptions* options, yyjson_val* module)
         }
 
         if (unsafe_yyjson_equals_str(key, "length")) {
-            ffPrintError(FF_SEPARATOR_MODULE_NAME, 0, NULL, FF_PRINT_TYPE_NO_CUSTOM_KEY, "The option length has been renamed to times.");
+            ffPrintError(FF_SEPARATOR_MODULE_NAME, 0, nullptr, FF_PRINT_TYPE_NO_CUSTOM_KEY, "The option length has been renamed to times.");
             continue;
         }
 
-        ffPrintError(FF_SEPARATOR_MODULE_NAME, 0, NULL, FF_PRINT_TYPE_NO_CUSTOM_KEY, "Unknown JSON key %s", unsafe_yyjson_get_str(key));
+        ffPrintError(FF_SEPARATOR_MODULE_NAME, 0, nullptr, FF_PRINT_TYPE_NO_CUSTOM_KEY, "Unknown JSON key %s", unsafe_yyjson_get_str(key));
     }
 }
 

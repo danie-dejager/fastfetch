@@ -124,7 +124,7 @@ void ffParseTitleJsonObject(FFTitleOptions* options, yyjson_val* module) {
             continue;
         }
 
-        ffPrintError(FF_TITLE_MODULE_NAME, 0, NULL, FF_PRINT_TYPE_NO_CUSTOM_KEY, "Unknown JSON key %s", unsafe_yyjson_get_str(key));
+        ffPrintError(FF_TITLE_MODULE_NAME, 0, nullptr, FF_PRINT_TYPE_NO_CUSTOM_KEY, "Unknown JSON key %s", unsafe_yyjson_get_str(key));
     }
 }
 
@@ -139,7 +139,7 @@ void ffGenerateTitleJsonConfig(FFTitleOptions* options, yyjson_mut_doc* doc, yyj
     yyjson_mut_obj_add_strbuf(doc, color, "host", &options->colorHost);
 }
 
-bool ffGenerateTitleJsonResult(FF_A_UNUSED FFTitleOptions* options, yyjson_mut_doc* doc, yyjson_mut_val* module) {
+bool ffGenerateTitleJsonResult([[maybe_unused]] FFTitleOptions* options, yyjson_mut_doc* doc, yyjson_mut_val* module) {
     yyjson_mut_val* obj = yyjson_mut_obj_add_obj(doc, module, "result");
 #ifdef _WIN32
     yyjson_mut_obj_add_strbuf(doc, obj, "userId", &instance.state.platform.sid);

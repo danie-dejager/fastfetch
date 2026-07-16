@@ -148,7 +148,7 @@ void ffGenerateBrightnessJsonConfig(FFBrightnessOptions* options, yyjson_mut_doc
     yyjson_mut_obj_add_bool(doc, module, "compact", options->compact);
 }
 
-bool ffGenerateBrightnessJsonResult(FF_A_UNUSED FFBrightnessOptions* options, yyjson_mut_doc* doc, yyjson_mut_val* module) {
+bool ffGenerateBrightnessJsonResult([[maybe_unused]] FFBrightnessOptions* options, yyjson_mut_doc* doc, yyjson_mut_val* module) {
     FF_LIST_AUTO_DESTROY result = ffListCreate();
 
     const char* error = ffDetectBrightness(options, &result);

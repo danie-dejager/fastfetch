@@ -94,10 +94,10 @@ static bool queryPciDeviceInfo(FFGPUResult* gpu, D3DKMT_DEVICE_IDS* outDeviceIds
 
             uint32_t pciBus = 0;
             ULONG pciBufLen = sizeof(pciBus);
-            if (CM_Get_DevNode_Registry_PropertyW(devInst, CM_DRP_BUSNUMBER, NULL, &pciBus, &pciBufLen, 0) == CR_SUCCESS) {
+            if (CM_Get_DevNode_Registry_PropertyW(devInst, CM_DRP_BUSNUMBER, nullptr, &pciBus, &pciBufLen, 0) == CR_SUCCESS) {
                 uint32_t pciAddr = 0;
                 pciBufLen = sizeof(pciAddr);
-                if (CM_Get_DevNode_Registry_PropertyW(devInst, CM_DRP_ADDRESS, NULL, &pciAddr, &pciBufLen, 0) == CR_SUCCESS) {
+                if (CM_Get_DevNode_Registry_PropertyW(devInst, CM_DRP_ADDRESS, nullptr, &pciAddr, &pciBufLen, 0) == CR_SUCCESS) {
                     entry->adapterAddress = ffGPUPciAddr2Id(0, pciBus, (pciAddr >> 16) & 0xFFFF, pciAddr & 0xFFFF);
                     FF_DEBUG("Cached device IDs for PCI bus %u: vendor=0x%04x device=0x%04x", pciBus, entry->deviceIds.VendorID, entry->deviceIds.DeviceID);
                 } else {
@@ -190,12 +190,12 @@ static bool queryVendorNameViaRegistry(FFstrbuf* vendor, D3DKMT_HANDLE hAdapter)
     swprintf(path, ARRAY_SIZE(path), L"SYSTEM\\CurrentControlSet\\Control\\Video\\{%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X}\\0000", guid.Data1, guid.Data2, guid.Data3, guid.Data4[0], guid.Data4[1], guid.Data4[2], guid.Data4[3], guid.Data4[4], guid.Data4[5], guid.Data4[6], guid.Data4[7]);
 
     FF_DEBUG("Querying registry: HKEY_LOCAL_MACHINE\\%ls\\ProviderName", path);
-    FF_AUTO_CLOSE_FD HANDLE key = NULL;
-    if (!ffRegOpenKeyForRead(HKEY_LOCAL_MACHINE, path, &key, NULL)) {
+    FF_AUTO_CLOSE_FD HANDLE key = nullptr;
+    if (!ffRegOpenKeyForRead(HKEY_LOCAL_MACHINE, path, &key, nullptr)) {
         return false;
     }
 
-    return ffRegReadStrbuf(key, L"ProviderName", vendor, NULL);
+    return ffRegReadStrbuf(key, L"ProviderName", vendor, nullptr);
 }
 
 #else
@@ -230,7 +230,7 @@ static void closeDxgfd(void) {
     }
 }
 
-FF_A_UNUSED static inline const char* ffDebugNtStatus(NTSTATUS status) {
+[[maybe_unused]] static inline const char* ffDebugNtStatus(NTSTATUS status) {
     return status < 0 ? strerror(-status) : "Success";
 }
 #endif
@@ -403,11 +403,11 @@ ffGPUDetectWsl2
             FF_DEBUG("KMTQAITYPE_UMD_DRIVER_VERSION query failed for adapter #%u: %s", i, ffDebugNtStatus(status));
         }
 
-        __typeof__(&ffDetectNvidiaGpuInfo) detectFn;
+        typeof(&ffDetectNvidiaGpuInfo) detectFn;
         const char* dllName;
         if (options->driverSpecific && getDriverSpecificDetectionFn(gpu->vendor.chars, &detectFn, &dllName)) {
             FF_DEBUG("Calling driver-specific detection function for vendor: %s, DLL: %s", gpu->vendor.chars, dllName);
-            FF_A_UNUSED const char* error = detectFn(
+            [[maybe_unused]] const char* error = detectFn(
                 &(FFGpuDriverCondition) {
                     .type = FF_GPU_DRIVER_CONDITION_TYPE_LUID |
                         (deviceIds.DeviceIds.VendorID != -1u ? FF_GPU_DRIVER_CONDITION_TYPE_DEVICE_ID : 0) |
@@ -428,17 +428,17 @@ ffGPUDetectWsl2
                 },
                 (FFGpuDriverResult) {
                     .index = &gpu->index,
-                    .temp = options->temp ? &gpu->temperature : NULL,
-                    .memory = options->driverSpecific ? &gpu->dedicated : NULL,
-                    .sharedMemory = options->driverSpecific ? &gpu->shared : NULL,
-                    .memoryType = options->driverSpecific ? &gpu->memoryType : NULL,
-                    .coreCount = options->driverSpecific ? (uint32_t*) &gpu->coreCount : NULL,
-                    .coreUsage = options->driverSpecific ? &gpu->coreUsage : NULL,
+                    .temp = options->temp ? &gpu->temperature : nullptr,
+                    .memory = options->driverSpecific ? &gpu->dedicated : nullptr,
+                    .sharedMemory = options->driverSpecific ? &gpu->shared : nullptr,
+                    .memoryType = options->driverSpecific ? &gpu->memoryType : nullptr,
+                    .coreCount = options->driverSpecific ? (uint32_t*) &gpu->coreCount : nullptr,
+                    .coreUsage = options->driverSpecific ? &gpu->coreUsage : nullptr,
                     .type = &gpu->type,
-                    .frequency = options->driverSpecific ? &gpu->frequency : NULL,
+                    .frequency = options->driverSpecific ? &gpu->frequency : nullptr,
                     .name = &gpu->name,
-                    .psCurr = options->driverSpecific ? &gpu->psCurr : NULL,
-                    .psMax = options->driverSpecific ? &gpu->psMax : NULL,
+                    .psCurr = options->driverSpecific ? &gpu->psCurr : nullptr,
+                    .psMax = options->driverSpecific ? &gpu->psMax : nullptr,
                 },
                 dllName);
             FF_DEBUG("Driver-specific detection completed: %s", error ?: "Success");
@@ -613,7 +613,7 @@ ffGPUDetectWsl2
 #if _WIN32
             else if (ffIsWindows10OrGreater()) {
                 const char* ffGPUDetectTypeWithDXCore(LUID adapterLuid, FFGPUResult * gpu);
-                FF_A_UNUSED const char* error = ffGPUDetectTypeWithDXCore(adapter->AdapterLuid, gpu);
+                [[maybe_unused]] const char* error = ffGPUDetectTypeWithDXCore(adapter->AdapterLuid, gpu);
                 FF_DEBUG("DXCore GPU type detection result: %s", error ?: "Success");
             }
 #endif
@@ -638,5 +638,5 @@ ffGPUDetectWsl2
         }
     }
 
-    return NULL;
+    return nullptr;
 }

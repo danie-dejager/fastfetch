@@ -35,7 +35,7 @@ void* ffLibraryLoadSingle(const char* path, int maxVersion) {
     // libX.dll.1 never exists on Windows, while libX-1.dll may exist
     FF_UNUSED(maxVersion)
 
-    if (result != NULL) {
+    if (result != nullptr) {
         return result;
     }
 
@@ -50,11 +50,11 @@ void* ffLibraryLoadSingle(const char* path, int maxVersion) {
 
     #else
 
-    if (result == NULL) {
+    if (result == nullptr) {
         FF_DEBUG("dlopen(\"%s\"): %s", path, dlerror());
     }
 
-    if (result != NULL || maxVersion < 0) {
+    if (result != nullptr || maxVersion < 0) {
         return result;
     }
 
@@ -67,7 +67,7 @@ void* ffLibraryLoadSingle(const char* path, int maxVersion) {
         ffStrbufAppendSInt(&pathbuf, i);
 
         result = dlopen(pathbuf.chars, FF_DLOPEN_FLAGS);
-        if (result != NULL) {
+        if (result != nullptr) {
             break;
         } else {
             FF_DEBUG("dlopen(\"%s\"): %s", pathbuf.chars, dlerror());
@@ -90,7 +90,7 @@ void* ffLibraryLoadMulti(const char* path, int maxVersion, ...) {
 
         do {
             const char* pathRest = va_arg(defaultNames, const char*);
-            if (pathRest == NULL) {
+            if (pathRest == nullptr) {
                 break;
             }
 
@@ -108,18 +108,18 @@ void* ffLibraryLoadMulti(const char* path, int maxVersion, ...) {
 
 #if _WIN32
 
-void* dlopen(const char* path, FF_A_UNUSED int mode) {
+void* dlopen(const char* path, [[maybe_unused]] int mode) {
     wchar_t pathW[MAX_PATH + 1];
     ULONG pathWBytes = 0;
 
     NTSTATUS status = RtlUTF8ToUnicodeN(pathW, sizeof(pathW), &pathWBytes, path, (uint32_t) strlen(path) + 1);
     if (!NT_SUCCESS(status)) {
         FF_DEBUG("RtlUTF8ToUnicodeN failed for path %s with status 0x%08lX: %s", path, status, ffDebugNtStatus(status));
-        return NULL;
+        return nullptr;
     }
 
-    PVOID module = NULL;
-    status = LdrLoadDll(NULL, NULL, &(UNICODE_STRING) {
+    PVOID module = nullptr;
+    status = LdrLoadDll(nullptr, nullptr, &(UNICODE_STRING) {
                                         .Length = (USHORT) (pathWBytes - sizeof(wchar_t)), // Exclude null terminator
                                         .MaximumLength = (USHORT) pathWBytes,
                                         .Buffer = pathW,
@@ -128,7 +128,7 @@ void* dlopen(const char* path, FF_A_UNUSED int mode) {
 
     if (!NT_SUCCESS(status)) {
         FF_DEBUG("LdrLoadDll failed for path %s with status 0x%08lX: %s", path, status, ffDebugNtStatus(status));
-        return NULL;
+        return nullptr;
     }
 
     return module;
@@ -155,17 +155,17 @@ void* dlsym(void* handle, const char* symbol) {
         &address);
     if (!NT_SUCCESS(status)) {
         FF_DEBUG("LdrGetProcedureAddress failed for symbol %s with status 0x%08lX: %s", symbol, status, ffDebugNtStatus(status));
-        return NULL;
+        return nullptr;
     }
     return address;
 }
 
 void* ffLibraryGetModule(const wchar_t* libraryFileName) {
-    assert(libraryFileName != NULL && "Use \"ffGetPeb()->ImageBaseAddress\" instead");
+    assert(libraryFileName != nullptr && "Use \"ffGetPeb()->ImageBaseAddress\" instead");
 
-    void* module = NULL;
+    void* module = nullptr;
     USHORT libraryFileNameBytes = (USHORT) (wcslen(libraryFileName) * sizeof(wchar_t) + sizeof(wchar_t));
-    NTSTATUS status = LdrGetDllHandle(NULL, NULL, &(UNICODE_STRING) {
+    NTSTATUS status = LdrGetDllHandle(nullptr, nullptr, &(UNICODE_STRING) {
                                                       .Length = libraryFileNameBytes - sizeof(wchar_t),
                                                       .MaximumLength = libraryFileNameBytes,
                                                       .Buffer = (wchar_t*) libraryFileName,
@@ -173,7 +173,7 @@ void* ffLibraryGetModule(const wchar_t* libraryFileName) {
         &module);
     if (!NT_SUCCESS(status)) {
         FF_DEBUG("LdrGetDllHandle failed for library %ls with status 0x%08lX: %s", libraryFileName, status, ffDebugNtStatus(status));
-        return NULL;
+        return nullptr;
     }
     return module;
 }

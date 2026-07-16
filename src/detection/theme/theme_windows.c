@@ -23,5 +23,5 @@ const char* ffDetectTheme(FFThemeResult* result) {
             ffStrbufSetStatic(&result->theme1, "Aero");
         }
     }
-    return NULL;
+    return nullptr;
 }

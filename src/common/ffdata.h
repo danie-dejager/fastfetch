@@ -2,7 +2,7 @@
 
 #include "common/FFstrbuf.h"
 
-typedef enum FF_A_PACKED FFDataResultDocType {
+typedef enum FFDataResultDocType: uint8_t {
     FF_RESULT_DOC_TYPE_DEFAULT = 0,
     FF_RESULT_DOC_TYPE_JSON,
     FF_RESULT_DOC_TYPE_CONFIG,

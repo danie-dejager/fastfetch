@@ -23,7 +23,7 @@ static const char* initWsaData(WSADATA* wsaData) {
     }
 
     // Dummy socket needed for WSAIoctl
-    SOCKET sockfd = WSASocketW(AF_INET, SOCK_STREAM, 0, NULL, 0, 0);
+    SOCKET sockfd = WSASocketW(AF_INET, SOCK_STREAM, 0, nullptr, 0, 0);
     if (sockfd == INVALID_SOCKET) {
         FF_DEBUG("WSASocketW(AF_INET, SOCK_STREAM) failed");
         WSACleanup();
@@ -32,7 +32,7 @@ static const char* initWsaData(WSADATA* wsaData) {
 
     DWORD dwBytes;
     GUID guid = WSAID_CONNECTEX;
-    if (WSAIoctl(sockfd, SIO_GET_EXTENSION_FUNCTION_POINTER, &guid, sizeof(guid), &ConnectEx, sizeof(ConnectEx), &dwBytes, NULL, NULL) != 0) {
+    if (WSAIoctl(sockfd, SIO_GET_EXTENSION_FUNCTION_POINTER, &guid, sizeof(guid), &ConnectEx, sizeof(ConnectEx), &dwBytes, nullptr, nullptr) != 0) {
         FF_DEBUG("WSAIoctl(sockfd, SIO_GET_EXTENSION_FUNCTION_POINTER) failed");
         closesocket(sockfd);
         WSACleanup();
@@ -42,7 +42,7 @@ static const char* initWsaData(WSADATA* wsaData) {
     closesocket(sockfd);
     FF_DEBUG("WinSock initialized successfully");
 
-    return NULL;
+    return nullptr;
 }
 
 const char* ffNetworkingSendHttpRequest(FFNetworkingState* state, const char* host, const char* path, const char* headers) {
@@ -52,7 +52,7 @@ const char* ffNetworkingSendHttpRequest(FFNetworkingState* state, const char* ho
 #ifdef FF_HAVE_ZLIB
         const char* zlibError = ffNetworkingLoadZlibLibrary();
         // Only enable compression if zlib library is successfully loaded
-        if (zlibError == NULL) {
+        if (zlibError == nullptr) {
             FF_DEBUG("Successfully loaded zlib library, compression enabled");
         } else {
             FF_DEBUG("Failed to load zlib library, compression disabled: %s", zlibError);
@@ -69,7 +69,7 @@ const char* ffNetworkingSendHttpRequest(FFNetworkingState* state, const char* ho
     static WSADATA wsaData;
     if (wsaData.wVersion == 0) {
         const char* error = initWsaData(&wsaData);
-        if (error != NULL) {
+        if (error != nullptr) {
             wsaData.wVersion = (WORD) -1;
             FF_DEBUG("WinSock initialization failed: %s", error);
             return error;
@@ -87,7 +87,7 @@ const char* ffNetworkingSendHttpRequest(FFNetworkingState* state, const char* ho
     };
 
     wchar_t hostW[256];
-    if (!NT_SUCCESS(RtlUTF8ToUnicodeN(hostW, (ULONG) sizeof(hostW), NULL, host, (ULONG) strlen(host) + 1))) {
+    if (!NT_SUCCESS(RtlUTF8ToUnicodeN(hostW, (ULONG) sizeof(hostW), nullptr, host, (ULONG) strlen(host) + 1))) {
         FF_DEBUG("Failed to convert host to wide string: %s", host);
         return "Failed to convert host to wide string";
     }
@@ -98,7 +98,7 @@ const char* ffNetworkingSendHttpRequest(FFNetworkingState* state, const char* ho
         return "GetAddrInfoW() failed";
     }
 
-    state->sockfd = WSASocketW(addr->ai_family, addr->ai_socktype, addr->ai_protocol, NULL, 0, 0);
+    state->sockfd = WSASocketW(addr->ai_family, addr->ai_socktype, addr->ai_protocol, nullptr, 0, 0);
     if (state->sockfd == INVALID_SOCKET) {
         FF_DEBUG("WSASocketW() failed");
         FreeAddrInfoW(addr);
@@ -189,7 +189,7 @@ const char* ffNetworkingSendHttpRequest(FFNetworkingState* state, const char* ho
     BOOL result = ConnectEx(state->sockfd, addr->ai_addr, (int) addr->ai_addrlen, state->command.chars, state->command.length, &sent, &state->overlapped);
 
     FreeAddrInfoW(addr);
-    addr = NULL;
+    addr = nullptr;
 
     if (!result) {
         if (WSAGetLastError() != WSA_IO_PENDING) {
@@ -207,7 +207,7 @@ const char* ffNetworkingSendHttpRequest(FFNetworkingState* state, const char* ho
     }
 
     // No need to cleanup state fields here since we need them in the receive function
-    return NULL;
+    return nullptr;
 }
 
 const char* ffNetworkingRecvHttpResponse(FFNetworkingState* state, FFstrbuf* buffer) {
@@ -250,9 +250,9 @@ const char* ffNetworkingRecvHttpResponse(FFNetworkingState* state, FFstrbuf* buf
     FF_DEBUG("WSAGetOverlappedResult succeeded, %u bytes sent", (unsigned) transfer);
     ffStrbufDestroy(&state->command);
     WSACloseEvent(state->overlapped.hEvent);
-    state->overlapped.hEvent = NULL;
+    state->overlapped.hEvent = nullptr;
 
-    if (setsockopt(state->sockfd, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, NULL, 0) != 0) {
+    if (setsockopt(state->sockfd, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, nullptr, 0) != 0) {
         FF_DEBUG("Failed to update connect context: %s", ffDebugWin32Error((DWORD) WSAGetLastError()));
         // Not a critical error, continue anyway
     }
@@ -275,7 +275,7 @@ const char* ffNetworkingRecvHttpResponse(FFNetworkingState* state, FFstrbuf* buf
     }
 
     FF_DEBUG("Starting data reception");
-    FF_A_UNUSED int recvCount = 0;
+    [[maybe_unused]] int recvCount = 0;
     uint32_t contentLength = 0;
     uint32_t headerEnd = 0;
 
@@ -293,8 +293,8 @@ const char* ffNetworkingRecvHttpResponse(FFNetworkingState* state, FFstrbuf* buf
             1,
             &received,
             &recvFlags,
-            NULL,
-            NULL);
+            nullptr,
+            nullptr);
 
         if (recvResult == SOCKET_ERROR || received == 0) {
             if (recvResult == 0 && received == 0) {
@@ -320,7 +320,7 @@ const char* ffNetworkingRecvHttpResponse(FFNetworkingState* state, FFstrbuf* buf
                 // Check for Content-Length header to pre-allocate enough memory
                 const char* clHeader = strcasestr(buffer->chars, "Content-Length:");
                 if (clHeader) {
-                    contentLength = (uint32_t) strtoul(clHeader + 15, NULL, 10);
+                    contentLength = (uint32_t) strtoul(clHeader + 15, nullptr, 10);
                     if (contentLength > 0) {
                         FF_DEBUG("Detected Content-Length: %u, pre-allocating buffer", contentLength);
                         // Ensure buffer is large enough, adding header size and some margin
@@ -372,5 +372,5 @@ const char* ffNetworkingRecvHttpResponse(FFNetworkingState* state, FFstrbuf* buf
     }
 #endif
 
-    return NULL;
+    return nullptr;
 }

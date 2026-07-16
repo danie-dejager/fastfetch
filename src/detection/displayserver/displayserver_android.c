@@ -33,8 +33,8 @@ static void detectWithDumpsys(FFDisplayServerResult* ds) {
     if (ffProcessAppendStdOut(&buf, (char*[]) {
                                         "/system/bin/dumpsys",
                                         "display",
-                                        NULL,
-                                    }) != NULL ||
+                                        nullptr,
+                                    }) != nullptr ||
         buf.length == 0) {
         return; // Only works in `adb shell`, or when rooted
     }
@@ -119,7 +119,7 @@ static bool detectWithGetprop(FFDisplayServerResult* ds) {
             0,
             0,
             0,
-            NULL,
+            nullptr,
             FF_DISPLAY_TYPE_BUILTIN,
             false,
             0,

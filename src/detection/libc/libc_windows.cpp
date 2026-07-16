@@ -64,5 +64,5 @@ extern "C" const char* ffDetectLibc(FFLibcResult* result) {
 #endif
 
     result->version = version<(__MSVCRT_VERSION__ >> 8), (__MSVCRT_VERSION__ & 8)>;
-    return NULL;
+    return nullptr;
 }

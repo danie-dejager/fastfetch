@@ -50,16 +50,16 @@ const char* ffDetectWifi(FFlist* result) {
     FF_LIBRARY_LOAD_SYMBOL_MESSAGE(wlanapi, WlanGetNetworkBssList)
 
     DWORD curVersion;
-    HANDLE hClient = NULL;
-    WLAN_INTERFACE_INFO_LIST* ifList = NULL;
-    const char* error = NULL;
+    HANDLE hClient = nullptr;
+    WLAN_INTERFACE_INFO_LIST* ifList = nullptr;
+    const char* error = nullptr;
 
-    if (ffWlanOpenHandle(2, NULL, &curVersion, &hClient) != ERROR_SUCCESS) {
+    if (ffWlanOpenHandle(2, nullptr, &curVersion, &hClient) != ERROR_SUCCESS) {
         error = "WlanOpenHandle() failed";
         goto exit;
     }
 
-    if (ffWlanEnumInterfaces(hClient, NULL, &ifList) != ERROR_SUCCESS) {
+    if (ffWlanEnumInterfaces(hClient, nullptr, &ifList) != ERROR_SUCCESS) {
         error = "WlanEnumInterfaces() failed";
         goto exit;
     }
@@ -87,14 +87,14 @@ const char* ffDetectWifi(FFlist* result) {
             continue;
         }
 
-        WLAN_CONNECTION_ATTRIBUTES* connInfo = NULL;
+        WLAN_CONNECTION_ATTRIBUTES* connInfo = nullptr;
         DWORD bufSize = sizeof(*connInfo);
         WLAN_OPCODE_VALUE_TYPE opCode = wlan_opcode_value_type_query_only;
 
         if (ffWlanQueryInterface(hClient,
                 &ifInfo->InterfaceGuid,
                 wlan_intf_opcode_current_connection,
-                NULL,
+                nullptr,
                 &bufSize,
                 (PVOID*) &connInfo,
                 &opCode) != ERROR_SUCCESS) {
@@ -200,13 +200,13 @@ const char* ffDetectWifi(FFlist* result) {
             ffStrbufAppendS(&item->conn.security, "Insecure");
         }
 
-        WLAN_BSS_LIST* bssList = NULL;
+        WLAN_BSS_LIST* bssList = nullptr;
         if (ffWlanGetNetworkBssList(hClient,
                 &ifInfo->InterfaceGuid,
                 &connInfo->wlanAssociationAttributes.dot11Ssid,
                 connInfo->wlanAssociationAttributes.dot11BssType,
                 connInfo->wlanSecurityAttributes.bSecurityEnabled,
-                NULL,
+                nullptr,
                 &bssList) == ERROR_SUCCESS &&
             bssList->dwNumberOfItems > 0) {
             item->conn.frequency = (uint16_t) (bssList->wlanBssEntries[0].ulChCenterFrequency / 1000);
@@ -220,7 +220,7 @@ const char* ffDetectWifi(FFlist* result) {
         if (ffWlanQueryInterface(hClient,
                 &ifInfo->InterfaceGuid,
                 wlan_intf_opcode_channel_number,
-                NULL,
+                nullptr,
                 &bufSize,
                 (PVOID*) &channelNumber,
                 &opCode) == ERROR_SUCCESS) {
@@ -234,7 +234,7 @@ exit:
         ffWlanFreeMemory(ifList);
     }
     if (hClient) {
-        ffWlanCloseHandle(hClient, NULL);
+        ffWlanCloseHandle(hClient, nullptr);
     }
     return error;
 }

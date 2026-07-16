@@ -41,8 +41,8 @@ static FFCodecType ffCodecCodecToType(CMVideoCodecType codec) {
 }
 
 static FFCodecType ffCodecDetectEncoders(void) {
-    CFArrayRef encoderList = NULL;
-    if (VTCopyVideoEncoderList(NULL, &encoderList) != noErr || !encoderList) {
+    CFArrayRef encoderList = nullptr;
+    if (VTCopyVideoEncoderList(nullptr, &encoderList) != noErr || !encoderList) {
         return FF_CODEC_TYPE_NONE;
     }
 
@@ -51,9 +51,9 @@ static FFCodecType ffCodecDetectEncoders(void) {
         CFDictionaryRef encoder = CFArrayGetValueAtIndex(encoderList, i);
         bool isHardwareAccelerated;
         int codec;
-        if (ffCfDictGetBool(encoder, CFSTR("IsHardwareAccelerated"), &isHardwareAccelerated) != NULL ||
+        if (ffCfDictGetBool(encoder, CFSTR("IsHardwareAccelerated"), &isHardwareAccelerated) != nullptr ||
             !isHardwareAccelerated ||
-            ffCfDictGetInt(encoder, CFSTR("CodecType"), &codec) != NULL) {
+            ffCfDictGetInt(encoder, CFSTR("CodecType"), &codec) != nullptr) {
             continue;
         }
         types |= ffCodecCodecToType((CMVideoCodecType) codec);
@@ -92,5 +92,5 @@ const char* ffDetectCodecNative(FFCodecOptions* options, FFlist* result /* list 
         item->platformApi = "VideoToolbox";
     }
 
-    return NULL;
+    return nullptr;
 }

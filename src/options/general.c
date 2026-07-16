@@ -9,7 +9,7 @@
 const char* ffOptionsParseGeneralJsonConfig(FFOptionsGeneral* options, yyjson_val* root, yyjson_val** pkey) {
     yyjson_val* object = yyjson_obj_get(root, "general");
     if (!object) {
-        return NULL;
+        return nullptr;
     }
     if (!yyjson_is_obj(object)) {
         return "Property 'general' must be an object";
@@ -60,7 +60,7 @@ const char* ffOptionsParseGeneralJsonConfig(FFOptionsGeneral* options, yyjson_va
         }
     }
 
-    return NULL;
+    return nullptr;
 }
 
 bool ffOptionsParseGeneralCommandLine(FFOptionsGeneral* options, const char* key, const char* value) {

@@ -10,7 +10,7 @@
 const char* ffOptionsParseDisplayJsonConfig(FFOptionsDisplay* options, yyjson_val* root, yyjson_val** pkey) {
     yyjson_val* object = yyjson_obj_get(root, "display");
     if (!object) {
-        return NULL;
+        return nullptr;
     }
     if (!yyjson_is_obj(object)) {
         return "Property 'display' must be an object";
@@ -571,11 +571,11 @@ const char* ffOptionsParseDisplayJsonConfig(FFOptionsDisplay* options, yyjson_va
         }
     }
 
-    return NULL;
+    return nullptr;
 }
 
 static inline void optionCheckString(const char* key, const char* value, FFstrbuf* buffer) {
-    if (value == NULL) {
+    if (value == nullptr) {
         fprintf(stderr, "Error: usage: %s <str>\n", key);
         exit(477);
     }

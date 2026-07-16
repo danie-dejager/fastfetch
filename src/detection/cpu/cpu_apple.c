@@ -6,13 +6,13 @@
 static double detectCpuTemp(const FFCPUOptions* options, const FFstrbuf* cpuName) {
     double result = 0;
 
-    const char* error = NULL;
+    const char* error = nullptr;
 
     if (options->tempSensor.length) {
         error = ffDetectSmcSpecificTemp(options->tempSensor.chars, &result);
     } else {
         if (ffStrbufStartsWithS(cpuName, "Apple M")) {
-            switch (strtol(cpuName->chars + strlen("Apple M"), NULL, 10)) {
+            switch (strtol(cpuName->chars + strlen("Apple M"), nullptr, 10)) {
                 case 1:
                     error = ffDetectSmcTemps(FF_TEMP_CPU_M1X, &result);
                     break;
@@ -83,7 +83,7 @@ static const char* detectFrequency(FFCPUResult* cpu) {
         }
     }
 
-    return NULL;
+    return nullptr;
 }
 #else
 static const char* detectFrequency(FFCPUResult* cpu) {
@@ -92,11 +92,11 @@ static const char* detectFrequency(FFCPUResult* cpu) {
     if (cpu->frequencyBase == 0) {
         unsigned current = 0;
         size_t size = sizeof(current);
-        if (sysctl((int[]) { CTL_HW, HW_CPU_FREQ }, 2, &current, &size, NULL, 0) == 0) {
+        if (sysctl((int[]) { CTL_HW, HW_CPU_FREQ }, 2, &current, &size, nullptr, 0) == 0) {
             cpu->frequencyBase = (uint32_t) (current / 1000 / 1000);
         }
     }
-    return NULL;
+    return nullptr;
 }
 #endif
 
@@ -117,11 +117,11 @@ static const char* detectCoreCount(FFCPUResult* cpu) {
             .count = (uint32_t) ffSysctlGetInt(sysctlKey, 0),
         };
     }
-    return NULL;
+    return nullptr;
 }
 
 const char* ffDetectCPUImpl(const FFCPUOptions* options, FFCPUResult* cpu) {
-    if (ffSysctlGetString("machdep.cpu.brand_string", &cpu->name) != NULL) {
+    if (ffSysctlGetString("machdep.cpu.brand_string", &cpu->name) != nullptr) {
         return "sysctlbyname(machdep.cpu.brand_string) failed";
     }
 
@@ -154,5 +154,5 @@ const char* ffDetectCPUImpl(const FFCPUOptions* options, FFCPUResult* cpu) {
 
     cpu->temperature = options->temp ? detectCpuTemp(options, &cpu->name) : FF_CPU_TEMP_UNSET;
 
-    return NULL;
+    return nullptr;
 }
