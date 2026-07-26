@@ -392,15 +392,12 @@ static bool compressBlob(void** blob, size_t* length) {
 
     #endif // FF_HAVE_ZLIB
 
-    #pragma GCC diagnostic push
-    #pragma GCC diagnostic ignored "-Wimplicit-int-float-conversion"
     // We use only the defines from here, that are exactly the same in both versions
     #ifdef FF_HAVE_IMAGEMAGICK7
         #include <MagickCore/MagickCore.h>
     #else
         #include <magick/MagickCore.h>
     #endif
-    #pragma GCC diagnostic pop
 
 typedef struct ImageData {
     FF_LIBRARY_SYMBOL(CopyMagickString)

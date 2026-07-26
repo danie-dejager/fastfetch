@@ -3,10 +3,7 @@
     #include "image.h"
     #include "common/library.h"
 
-    #pragma GCC diagnostic push
-    #pragma GCC diagnostic ignored "-Wimplicit-int-float-conversion"
     #include <MagickCore/MagickCore.h>
-    #pragma GCC diagnostic pop
 
 static FF_LIBRARY_SYMBOL(ResizeImage)
 
