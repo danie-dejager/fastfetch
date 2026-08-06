@@ -13,9 +13,9 @@ BuildRequires:  python3
 # Compiler
 # Compiler selection
 %if 0%{?rhel} == 9
-BuildRequires:  clang16
-BuildRequires:  clang16-devel
-%global clang_ver 16
+BuildRequires:  clang20
+BuildRequires:  clang20-devel
+%global clang_ver 20
 %endif
 
 %if 0%{?rhel} == 10
