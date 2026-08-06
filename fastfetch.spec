@@ -56,6 +56,10 @@ Recommends:     ddcutil
 
 %global debug_package %{nil}
 
+%if 0%{?amzn} == 2023
+%global _lto_cflags %{nil}
+%endif
+
 %description
 fastfetch is a neofetch-like tool for fetching system information and
 displaying it in a pretty way. It is written in C to achieve much better
