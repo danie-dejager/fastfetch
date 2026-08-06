@@ -144,7 +144,7 @@ upx %{buildroot}/%{_bindir}/%{name}
 * Fri Apr 6 2025 - Danie de Jager <danie.dejager@gmail.com> - 2.40.3-1
 * Fri Apr 4 2025 - Danie de Jager <danie.dejager@gmail.com> - 2.40.2-1
 * Sun Mar 23 2025 - Danie de Jager <danie.dejager@gmail.com> - 2.39.1-1
-* Wed Mar 8 2025 - Danie de Jager <danie.dejager@gmail.com> - 2.38.0-1
+* Sat Mar 8 2025 - Danie de Jager <danie.dejager@gmail.com> - 2.38.0-1
 * Wed Feb 19 2025 - Danie de Jager <danie.dejager@gmail.com> - 2.37.0-1
 * Tue Feb 11 2025 - Danie de Jager <danie.dejager@gmail.com> - 2.36.1-1
 * Mon Feb 10 2025 - Danie de Jager <danie.dejager@gmail.com> - 2.36.0-1
@@ -160,8 +160,8 @@ upx %{buildroot}/%{_bindir}/%{name}
 * Mon Nov 1 2024 - Danie de Jager <danie.dejager@gmail.com> - 2.29.0-1
 * Thu Oct 24 2024 - Danie de Jager <danie.dejager@gmail.com> - 2.28.0-1
 * Mon Sep 30 2024 - Danie de Jager <danie.dejager@gmail.com> - 2.26.1-1
-* Tue Sep 11 2024 - Danie de Jager <danie.dejager@gmail.com> - 2.25.0-1
-* Tue Sep 11 2024 - Danie de Jager <danie.dejager@gmail.com> - 2.24.0-1
+* Wed Sep 11 2024 - Danie de Jager <danie.dejager@gmail.com> - 2.25.0-1
+* Wed Sep 11 2024 - Danie de Jager <danie.dejager@gmail.com> - 2.24.0-1
 * Tue Sep 3 2024 - Danie de Jager <danie.dejager@gmail.com> - 2.23.0-1
 * Tue Aug 27 2024 - Danie de Jager <danie.dejager@gmail.com> - 2.22.0-1
 * Wed Aug 14 2024 Danie de Jager <danie.dejager@gmail.com> - 2.21.2-1
