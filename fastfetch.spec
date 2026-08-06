@@ -1,16 +1,28 @@
 Name:           fastfetch
 Version:        2.67.0
-Release:        1%{?dist}
-Summary:        Like neofetch, but much faster because written in c
- 
+Release:        2%{?dist}
+Summary:        Like neofetch, but much faster because written in C
+
 License:        MIT
 URL:            https://github.com/fastfetch-cli/fastfetch
 Source0:        %{url}/archive/%{version}/%{name}-%{version}.tar.gz
- 
+
 BuildRequires:  cmake
 BuildRequires:  python3
-BuildRequires:  gcc
-BuildRequires:  gcc-c++
+
+# Compiler
+%if 0%{?rhel} == 9
+BuildRequires:  clang16
+BuildRequires:  clang16-devel
+%global clang_cc clang-16
+%global clang_cxx clang++-16
+%else
+BuildRequires:  clang
+BuildRequires:  clang-devel
+%global clang_cc clang
+%global clang_cxx clang++
+%endif
+
 BuildRequires:  pciutils-devel
 BuildRequires:  dconf-devel
 BuildRequires:  dbus-devel
@@ -21,7 +33,6 @@ BuildRequires:  ocl-icd-devel
 BuildRequires:  yyjson-devel > 0.9.0
 BuildRequires:  elfutils-libelf-devel
 BuildRequires:  rpm-devel
-BuildRequires:  upx
 
 Recommends:     hwdata
 Recommends:     dconf
@@ -30,15 +41,13 @@ Recommends:     zlib
 Recommends:     glib2
 Recommends:     ddcutil
 
-%define debug_package %{nil}
-
+%global debug_package %{nil}
 
 %description
 fastfetch is a neofetch-like tool for fetching system information and
-displaying them in a pretty way. It is written in c to achieve much better
-performance, in return only Linux and Android are supported. It also uses
-mechanisms like multithreading and caching to finish as fast as possible.
-
+displaying it in a pretty way. It is written in C to achieve much better
+performance while supporting Linux and Android. It also uses multithreading
+and caching to minimize startup time.
 
 %package bash-completion
 Summary: Bash completion files for %{name}
@@ -59,7 +68,7 @@ BuildArch: noarch
 %{summary}
 
 %package zsh-completion
-Summary: ZSH completion files for %{name}
+Summary: Zsh completion files for %{name}
 Requires: zsh
 Requires: %{name} = %{version}-%{release}
 BuildArch: noarch
@@ -67,25 +76,23 @@ BuildArch: noarch
 %description zsh-completion
 %{summary}
 
-
 %prep
 %autosetup -p1
 
- 
 %build
-%cmake -D BUILD_TESTS=ON -D BUILD_FLASHFETCH=OFF
+%cmake \
+    -DCMAKE_C_COMPILER=%{clang_cc} \
+    -DCMAKE_CXX_COMPILER=%{clang_cxx} \
+    -DBUILD_TESTS=ON \
+    -DBUILD_FLASHFETCH=OFF
+
 %cmake_build
 
-
 %check
-%ctest
-
+%ctest --output-on-failure
 
 %install
 %cmake_install
-# Compress the binary using upx after installation
-upx %{buildroot}/%{_bindir}/%{name}
-
 
 %files
 %license LICENSE
@@ -104,8 +111,10 @@ upx %{buildroot}/%{_bindir}/%{name}
 %{_datadir}/zsh/site-functions/_%{name}
 
 %changelog
-* Thu Aug 06 2026 - Danie de Jager <danie.dejager@gmail.com> - 2.67.0-1 
-* Fri Jul 10 2026 - Danie de Jager <danie.dejager@gmail.com> - 2.66.0-1 
+* Thu Aug 06 2026 - Danie de Jager <danie.dejager@gmail.com> - 2.67.0-2
+- Build using clang
+* Thu Aug 06 2026 - Danie de Jager <danie.dejager@gmail.com> - 2.67.0-1
+* Fri Jul 10 2026 - Danie de Jager <danie.dejager@gmail.com> - 2.66.0-1
 * Tue Jun 9 2026 - Danie de Jager <danie.dejager@gmail.com> - 2.64.2-1
 * Fri Jun 5 2026 - Danie de Jager <danie.dejager@gmail.com> - 2.64.1-1
 * Wed Jun 3 2026 - Danie de Jager <danie.dejager@gmail.com> - 2.64.0-1
