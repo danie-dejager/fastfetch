@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.12.0) # target_link_libraries with OBJECT libs & project homepage url
 
 project(fastfetch
-    VERSION 2.66.0
+    VERSION 2.67.0
     LANGUAGES C
     DESCRIPTION "Fast neofetch-like system information tool"
     HOMEPAGE_URL "https://github.com/fastfetch-cli/fastfetch"
@@ -434,6 +434,7 @@ set(LIBFASTFETCH_SRC
     src/common/impl/font.c
     src/common/impl/format.c
     src/common/impl/frequency.c
+    src/common/impl/genconfig.c
     src/common/impl/init.c
     src/common/impl/jsonconfig.c
     src/common/impl/library.c
