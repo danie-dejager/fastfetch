@@ -11,29 +11,30 @@ BuildRequires:  cmake
 BuildRequires:  python3
 
 # Compiler
+# Compiler selection
 %if 0%{?rhel} == 9
-
 BuildRequires:  clang16
 BuildRequires:  clang16-devel
-%global clang_cc clang-16
-%global clang_cxx clang++-16
+%global clang_ver 16
+%endif
 
-%else %if 0%{?rhel} == 10
-
+%if 0%{?rhel} == 10
 BuildRequires:  clang20
 BuildRequires:  clang20-devel
-%global clang_cc clang-20
-%global clang_cxx clang++-20
+%global clang_ver 20
+%endif
 
-%else
-
-# Amazon Linux 2023
+%if 0%{?amzn} == 2023
 BuildRequires:  clang22
 BuildRequires:  clang22-devel
-%global clang_cc clang-22
-%global clang_cxx clang++-22
-
+%global clang_ver 22
 %endif
+
+# Fallback for other distributions
+%{!?clang_ver:%global clang_ver 20}
+
+%global clang_cc  clang-%{clang_ver}
+%global clang_cxx clang++-%{clang_ver}
 
 BuildRequires:  pciutils-devel
 BuildRequires:  dconf-devel
