@@ -12,15 +12,27 @@ BuildRequires:  python3
 
 # Compiler
 %if 0%{?rhel} == 9
+
 BuildRequires:  clang16
 BuildRequires:  clang16-devel
 %global clang_cc clang-16
 %global clang_cxx clang++-16
+
+%else %if 0%{?rhel} == 10
+
+BuildRequires:  clang20
+BuildRequires:  clang20-devel
+%global clang_cc clang-20
+%global clang_cxx clang++-20
+
 %else
-BuildRequires:  clang
-BuildRequires:  clang-devel
-%global clang_cc clang
-%global clang_cxx clang++
+
+# Amazon Linux 2023
+BuildRequires:  clang22
+BuildRequires:  clang22-devel
+%global clang_cc clang-22
+%global clang_cxx clang++-22
+
 %endif
 
 BuildRequires:  pciutils-devel
