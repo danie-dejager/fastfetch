@@ -62,6 +62,7 @@ if(NOT PKG_CONFIG_FOUND)
 endif()
 
 include(CheckIncludeFile)
+include(CheckFunctionExists)
 
 if(LINUX)
     CHECK_INCLUDE_FILE("linux/version.h" HAVE_LINUX_VERSION_H)
@@ -1022,7 +1023,7 @@ elseif(APPLE)
         src/detection/cpu/cpu_apple.c
         src/detection/cpucache/cpucache_apple.c
         src/detection/cpuusage/cpuusage_apple.c
-        src/detection/cursor/cursor_apple.m
+        src/detection/cursor/cursor_apple.c
         src/detection/disk/disk_bsd.c
         src/detection/dns/dns_apple.c
         src/detection/physicaldisk/physicaldisk_apple.c
@@ -1037,7 +1038,7 @@ elseif(APPLE)
         src/detection/lm/lm_nosupport.c
         src/detection/loadavg/loadavg_bsd.c
         src/detection/libc/libc_apple.c
-        src/detection/locale/locale_linux.c
+        src/detection/locale/locale_apple.c
         src/detection/localip/localip_linux.c
         src/detection/gamepad/gamepad_apple.c
         src/detection/media/media_apple.m
@@ -1063,7 +1064,7 @@ elseif(APPLE)
         src/detection/wifi/wifi_apple.m
         src/detection/wm/wm_apple.m
         src/detection/de/de_nosupport.c
-        src/detection/wmtheme/wmtheme_apple.m
+        src/detection/wmtheme/wmtheme_apple.c
         src/detection/camera/camera_apple.m
     )
     # CMAKE_SYSTEM_PROCESSOR has been normalized before
@@ -1281,7 +1282,6 @@ elseif(Haiku)
         src/detection/keyboard/keyboard_haiku.cpp
         src/detection/libc/libc_nosupport.c
         src/detection/lm/lm_nosupport.c
-        src/detection/loadavg/loadavg_nosupport.c
         src/detection/locale/locale_linux.c
         src/detection/localip/localip_linux.c
         src/detection/gamepad/gamepad_haiku.cpp
@@ -1311,6 +1311,13 @@ elseif(Haiku)
         src/detection/wmtheme/wmtheme_haiku.cpp
         src/detection/camera/camera_nosupport.c
     )
+    set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} bsd)
+    check_function_exists(getloadavg HAVE_GETLOADAVG)
+    if(HAVE_GETLOADAVG)
+        list(APPEND LIBFASTFETCH_SRC src/detection/loadavg/loadavg_sunos.c)
+    else()
+        list(APPEND LIBFASTFETCH_SRC src/detection/loadavg/loadavg_nosupport.c)
+    endif()
 elseif(GNU)
     list(APPEND LIBFASTFETCH_SRC
         src/common/impl/dbus.c
@@ -1428,7 +1435,6 @@ if(WIN32)
         endif()
     endif()
 endif()
-include(CheckFunctionExists)
 if(NOT WIN32)
     check_function_exists(pipe2 HAVE_PIPE2)
 endif()
@@ -2020,6 +2026,7 @@ elseif(Haiku)
         PRIVATE "GL"
         PRIVATE "be"
         PRIVATE "gnu"
+        PRIVATE "bsd"
     )
 endif()
 
