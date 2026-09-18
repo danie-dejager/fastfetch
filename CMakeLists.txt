@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21.0) # C_STANDARD C17 and C23
 
 project(fastfetch
-    VERSION 2.68.1
+    VERSION 2.69.0
     LANGUAGES C
     DESCRIPTION "Fast neofetch-like system information tool"
     HOMEPAGE_URL "https://github.com/fastfetch-cli/fastfetch"
@@ -88,9 +88,6 @@ cmake_dependent_option(ENABLE_EET "Enable eet" ON "LINUX OR FreeBSD OR OpenBSD O
 cmake_dependent_option(ENABLE_DBUS "Enable dbus-1" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR ANDROID OR SunOS OR Haiku OR GNU" OFF)
 cmake_dependent_option(ENABLE_SQLITE3 "Enable sqlite3" ON "LINUX OR FreeBSD OR APPLE OR OpenBSD OR NetBSD OR SunOS OR GNU" OFF)
 cmake_dependent_option(ENABLE_RPM "Enable rpm" ON "LINUX OR GNU" OFF)
-cmake_dependent_option(ENABLE_IMAGEMAGICK7 "Enable imagemagick 7" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR APPLE OR ANDROID OR WIN32 OR SunOS OR Haiku OR GNU" OFF)
-cmake_dependent_option(ENABLE_IMAGEMAGICK6 "Enable imagemagick 6" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR APPLE OR SunOS OR GNU" OFF)
-cmake_dependent_option(ENABLE_CHAFA "Enable chafa" ON "ENABLE_IMAGEMAGICK6 OR ENABLE_IMAGEMAGICK7" OFF)
 cmake_dependent_option(ENABLE_EGL "Enable egl" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR ANDROID OR WIN32 OR SunOS OR Haiku OR GNU" OFF)
 cmake_dependent_option(ENABLE_GLX "Enable glx" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR ANDROID OR SunOS OR GNU" OFF)
 cmake_dependent_option(ENABLE_OPENCL "Enable opencl" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR WIN32 OR ANDROID OR SunOS OR Haiku OR GNU" OFF)
@@ -99,6 +96,14 @@ cmake_dependent_option(ENABLE_PULSE "Enable pulse" ON "LINUX OR ANDROID OR GNU" 
 cmake_dependent_option(ENABLE_DDCUTIL "Enable ddcutil" ON "LINUX" OFF)
 cmake_dependent_option(ENABLE_ELF "Enable libelf" ON "LINUX OR ANDROID OR DragonFly OR Haiku OR GNU" OFF)
 cmake_dependent_option(ENABLE_THREADS "Enable multithreading" ON "Threads_FOUND" OFF)
+
+option(ENABLE_IMAGE_LOGO "Enable image logos (sixel / kitty / iTerm / chafa)" ON)
+if(ENABLE_IMAGE_LOGO)
+    cmake_dependent_option(ENABLE_IMAGEMAGICK7 "Enable imagemagick 7" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR SunOS OR Haiku OR GNU" OFF)
+    cmake_dependent_option(ENABLE_IMAGEMAGICK6 "Enable imagemagick 6" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR SunOS OR GNU" OFF)
+    cmake_dependent_option(ENABLE_SIXEL "Enable sixel logo output via the embedded libsixel encoder (Windows, macOS and Android; replaces ImageMagick's SIXEL coder)" ON "WIN32 OR APPLE OR ANDROID" OFF)
+    cmake_dependent_option(ENABLE_CHAFA "Enable chafa" ON "ENABLE_IMAGEMAGICK6 OR ENABLE_IMAGEMAGICK7 OR WIN32 OR APPLE OR ANDROID" OFF)
+endif()
 
 option(ENABLE_ZLIB "Enable zlib" ON)
 option(ENABLE_SYSTEM_YYJSON "Use system provided (instead of fastfetch embedded) yyjson library" OFF)
@@ -500,15 +505,21 @@ set(LIBFASTFETCH_SRC
     src/detection/weather/weather.c
     src/detection/zpool/zpool.c
     src/logo/builtin.c
-    src/logo/image/im6.c
-    src/logo/image/im7.c
-    src/logo/image/image.c
     src/logo/logo.c
     src/modules/modules.c
     src/options/display.c
     src/options/logo.c
     src/options/general.c
 )
+
+if(ENABLE_IMAGE_LOGO)
+    list(APPEND LIBFASTFETCH_SRC
+        src/logo/image/image.c
+        src/logo/image/im6.c
+        src/logo/image/im7.c
+        src/logo/image/sixel.c
+    )
+endif()
 
 foreach(FF_MODULE_DIR ${FF_MODULE_DIRS})
     list(APPEND LIBFASTFETCH_SRC
@@ -684,6 +695,7 @@ elseif(ANDROID)
         src/detection/de/de_linux.c
         src/detection/wmtheme/wmtheme_linux.c
         src/detection/camera/camera_android.c
+        src/logo/image/aid.c
     )
 elseif(FreeBSD)
     list(APPEND LIBFASTFETCH_SRC
@@ -1022,6 +1034,11 @@ elseif(APPLE)
         src/detection/wmtheme/wmtheme_apple.c
         src/detection/camera/camera_apple.m
     )
+    if(ENABLE_IMAGE_LOGO)
+        list(APPEND LIBFASTFETCH_SRC
+            src/logo/image/imageio.c
+        )
+    endif()
     # CMAKE_SYSTEM_PROCESSOR has been normalized before
     if(CMAKE_SYSTEM_PROCESSOR STREQUAL "amd64")
         list(APPEND LIBFASTFETCH_SRC
@@ -1115,6 +1132,11 @@ elseif(WIN32)
         src/detection/wmtheme/wmtheme_windows.c
         src/detection/camera/camera_windows.cpp
     )
+    if(ENABLE_IMAGE_LOGO)
+        list(APPEND LIBFASTFETCH_SRC
+            src/logo/image/wic.cpp
+        )
+    endif()
 elseif(SunOS)
     list(APPEND LIBFASTFETCH_SRC
         src/common/impl/dbus.c
@@ -1418,6 +1440,21 @@ else()
     )
 endif()
 
+if(ENABLE_SIXEL)
+    set(FF_SIXEL_SRC
+        src/3rdparty/sixel/allocator.c
+        src/3rdparty/sixel/dither.c
+        src/3rdparty/sixel/output.c
+        src/3rdparty/sixel/pixelformat.c
+        src/3rdparty/sixel/quant.c
+        src/3rdparty/sixel/status.c
+        src/3rdparty/sixel/tosixel.c
+    )
+    list(APPEND LIBFASTFETCH_SRC ${FF_SIXEL_SRC})
+
+    set_source_files_properties(${FF_SIXEL_SRC} PROPERTIES COMPILE_OPTIONS "-Wno-conversion")
+endif()
+
 add_library(libfastfetch OBJECT
     ${LIBFASTFETCH_SRC}
 )
@@ -1458,10 +1495,11 @@ if(yyjson_FOUND)
     # `target_link_libraries(yyjson::yyjson)` sets rpath implicitly
 endif()
 
-# Used for dlopen finding dylibs installed by homebrew
-# `/opt/homebrew/lib` is not on in dlopen search path by default
+# Used for dlopen finding dylibs installed by package managers
+# `/opt/homebrew/lib`, `/usr/local/lib` and `/opt/local/lib` are not on the
+# dlopen search path by default
 if(APPLE AND BINARY_LINK_TYPE STREQUAL "dlopen")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath,/opt/homebrew/lib -Wl,-rpath,/usr/local/lib")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath,/opt/homebrew/lib -Wl,-rpath,/usr/local/lib -Wl,-rpath,/opt/local/lib")
 endif()
 
 if(ANDROID)
@@ -1826,6 +1864,10 @@ if(ENABLE_THREADS)
     endif()
 endif()
 
+if(ENABLE_IMAGE_LOGO)
+    target_compile_definitions(libfastfetch PUBLIC FF_HAVE_IMAGE_LOGO=1)
+endif()
+
 if(ENABLE_EMBEDDED_PCIIDS)
     target_compile_definitions(libfastfetch PUBLIC FF_HAVE_EMBEDDED_PCIIDS=1)
 endif()
@@ -1868,6 +1910,8 @@ elseif(APPLE)
         PRIVATE "-framework CoreAudio"
         PRIVATE "-framework CoreMedia"
         PRIVATE "-framework CoreVideo"
+        PRIVATE "-framework ImageIO"
+        PRIVATE "-framework Accelerate"
         PRIVATE "-framework CoreWLAN"
         PRIVATE "-framework IOBluetooth"
         PRIVATE "-framework IOKit"
@@ -1896,6 +1940,7 @@ elseif(WIN32)
         PRIVATE "cfgmgr32"
         PRIVATE "winbrand"
         PRIVATE "secur32"
+        PRIVATE "windowscodecs"
     )
     if(NOT ENABLE_WIN81_COMPAT)
         target_link_libraries(libfastfetch
@@ -1930,7 +1975,6 @@ elseif(FreeBSD)
 elseif(OpenBSD)
     target_link_libraries(libfastfetch
         PRIVATE "m"
-        PRIVATE "kvm"
         PRIVATE "sndio"
         PRIVATE "util"
     )
@@ -1957,6 +2001,9 @@ elseif(GNU)
 elseif(ANDROID)
     target_link_libraries(libfastfetch
         PRIVATE "m"
+        PRIVATE jnigraphics
+        PRIVATE mediandk
+        PRIVATE camera2ndk
     )
     if(ENABLE_WORDEXP)
         # https://github.com/termux/termux-packages/pull/7056
@@ -1974,6 +2021,17 @@ elseif(ANDROID)
             endif()
         endif()
     endif()
+
+    # Both APIs (AImageDecoder, AMediaCodec) are newer than the API level this build targets --
+    # AImageDecoder is 30, and AMediaCodec_getName / AMediaCodec_releaseName are 28 -- while fastfetch
+    # keeps running on devices below those levels. The NDK headers mark the entry points unavailable, so
+    # they have to be weak references: otherwise the executable would fail to load on an older device.
+    # Guarding every use with __builtin_available() is what makes that safe, and turning the guard
+    # diagnostic into an error is what keeps a use from slipping past it.
+    set_source_files_properties(
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/logo/image/aid.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/detection/codec/codec_android.c
+        PROPERTIES COMPILE_OPTIONS "-D__ANDROID_UNAVAILABLE_SYMBOLS_ARE_WEAK__;-Werror=unguarded-availability")
 elseif(Haiku)
     target_link_libraries(libfastfetch
         PRIVATE "network"
@@ -1992,6 +2050,16 @@ target_include_directories(libfastfetch
     PUBLIC ${PROJECT_BINARY_DIR}
     PUBLIC ${PROJECT_SOURCE_DIR}/src
 )
+
+if(ENABLE_SIXEL)
+    # src/3rdparty/sixel/*.c include <sixel.h> (angle brackets, so the directory itself
+    # has to be on the include path)
+    target_include_directories(libfastfetch PRIVATE ${PROJECT_SOURCE_DIR}/src/3rdparty/sixel)
+
+    # The vendored subset is not a library to be detected, so FF_HAVE_SIXEL can't come
+    # from ff_lib_enable() and has to be defined here
+    target_compile_definitions(libfastfetch PUBLIC FF_HAVE_SIXEL=1)
+endif()
 
 target_link_libraries(libfastfetch
     PRIVATE ${CMAKE_DL_LIBS}
@@ -2172,6 +2240,76 @@ if (BUILD_TESTS)
         PRIVATE libfastfetch
     )
 
+    add_executable(fastfetch-test-networking
+        tests/networking.c
+    )
+    target_link_libraries(fastfetch-test-networking
+        PRIVATE libfastfetch
+    )
+
+    add_executable(fastfetch-test-base64
+        tests/base64.c
+    )
+    target_link_libraries(fastfetch-test-base64
+        PRIVATE libfastfetch
+    )
+
+    add_executable(fastfetch-test-parsing
+        tests/parsing.c
+    )
+    target_link_libraries(fastfetch-test-parsing
+        PRIVATE libfastfetch
+    )
+
+    add_executable(fastfetch-test-properties
+        tests/properties.c
+    )
+    target_link_libraries(fastfetch-test-properties
+        PRIVATE libfastfetch
+    )
+
+    add_executable(fastfetch-test-size
+        tests/size.c
+    )
+    target_link_libraries(fastfetch-test-size
+        PRIVATE libfastfetch
+    )
+
+    add_executable(fastfetch-test-frequency
+        tests/frequency.c
+    )
+    target_link_libraries(fastfetch-test-frequency
+        PRIVATE libfastfetch
+    )
+
+    add_executable(fastfetch-test-percent
+        tests/percent.c
+    )
+    target_link_libraries(fastfetch-test-percent
+        PRIVATE libfastfetch
+    )
+
+    add_executable(fastfetch-test-temps
+        tests/temps.c
+    )
+    target_link_libraries(fastfetch-test-temps
+        PRIVATE libfastfetch
+    )
+
+    add_executable(fastfetch-test-endian
+        tests/endian.c
+    )
+    target_link_libraries(fastfetch-test-endian
+        PRIVATE libfastfetch
+    )
+
+    add_executable(fastfetch-test-endian-bigendian
+        tests/endian-bigendian.c
+    )
+    target_link_libraries(fastfetch-test-endian-bigendian
+        PRIVATE libfastfetch
+    )
+
     enable_testing()
     add_test(NAME test-strbuf COMMAND fastfetch-test-strbuf)
     add_test(NAME test-list COMMAND fastfetch-test-list)
@@ -2179,6 +2317,16 @@ if (BUILD_TESTS)
     add_test(NAME test-color COMMAND fastfetch-test-color)
     add_test(NAME test-duration COMMAND fastfetch-test-duration)
     add_test(NAME test-strutil COMMAND fastfetch-test-strutil)
+    add_test(NAME test-networking COMMAND fastfetch-test-networking)
+    add_test(NAME test-base64 COMMAND fastfetch-test-base64)
+    add_test(NAME test-parsing COMMAND fastfetch-test-parsing)
+    add_test(NAME test-properties COMMAND fastfetch-test-properties)
+    add_test(NAME test-size COMMAND fastfetch-test-size)
+    add_test(NAME test-frequency COMMAND fastfetch-test-frequency)
+    add_test(NAME test-percent COMMAND fastfetch-test-percent)
+    add_test(NAME test-temps COMMAND fastfetch-test-temps)
+    add_test(NAME test-endian COMMAND fastfetch-test-endian)
+    add_test(NAME test-endian-bigendian COMMAND fastfetch-test-endian-bigendian)
 endif()
 
 ##################

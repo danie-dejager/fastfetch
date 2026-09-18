@@ -766,10 +766,19 @@
                             "description": "Whether to preserve the aspect ratio of the logo. Supported by iTerm image protocol only",
                             "default": false
                         },
-                        "recache": {
-                            "type": "boolean",
-                            "description": "If true, regenerate image logo cache",
-                            "default": false
+                        "cache": {
+                            "description": "How the image logo cache is used. true reuses a cached rendering when it is valid and writes it back on a cache miss; false ignores the cache completely, neither reading nor writing it; \"regen\" ignores any existing cached rendering and regenerates it",
+                            "oneOf": [
+                                {
+                                    "type": "boolean",
+                                    "description": "Whether to use the image logo cache"
+                                },
+                                {
+                                    "const": "regen",
+                                    "description": "Regenerate the image logo cache, ignoring any existing cached rendering"
+                                }
+                            ],
+                            "default": true
                         },
                         "position": {
                             "type": "string",
@@ -780,6 +789,11 @@
                                 "right"
                             ],
                             "default": "left"
+                        },
+                        "animationFrame": {
+                            "type": "integer",
+                            "description": "Frame of an animated image to render:\n0 plays the animation (kitty image protocol only), a positive value is the 1-based frame number, and a negative value counts back from the end, so -1 is the last frame.\nOnly the JSON config can express a negative value, as the command line parser reads a leading `-` as another option",
+                            "default": 1
                         },
                         "chafa": {
                             "type": "object",
@@ -2701,7 +2715,7 @@
                                     "waitTime": {
                                         "type": "integer",
                                         "description": "Wait time (in ms) used to measure the I/O rate (calculated in bytes/sec).\nAvoid setting this too low, as the kernel requires time to accurately update counters.\nIgnored if 'detectTotal' is true.",
-                                        "default": 500,
+                                        "default": 250,
                                         "minimum": 1
                                     },
                                     "key": {
@@ -3602,7 +3616,7 @@
                                     "waitTime": {
                                         "type": "integer",
                                         "description": "Wait time (in ms) used to measure the I/O rate (calculated in bytes/sec).\nAvoid setting this too low, as the kernel requires time to accurately update counters.\nIgnored if 'detectTotal' is true.",
-                                        "default": 500,
+                                        "default": 250,
                                         "minimum": 1
                                     },
                                     "key": {
