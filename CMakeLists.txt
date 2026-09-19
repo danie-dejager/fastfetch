@@ -615,6 +615,8 @@ if(LINUX)
     )
 elseif(ANDROID)
     list(APPEND LIBFASTFETCH_SRC
+        src/common/android/binder.c
+        src/common/android/dex.c
         src/common/impl/dbus.c
         src/common/impl/io_unix.c
         src/common/impl/netif_linux.c
