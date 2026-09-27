@@ -16,6 +16,33 @@ const char* ffDetectPackages(FFPackagesResult* result, FFPackagesOptions* option
     return nullptr;
 }
 
+bool ffPackagesReadCacheKey(FFstrbuf* cacheDir, FFstrbuf* cacheContent, uint64_t cacheKey, const char* packageId, uint32_t* result) {
+    if (__builtin_expect(cacheKey == 0, false)) {
+        // The caller could not compute a cache key (its data source is unreadable). Nothing may be
+        // cached under an unknown key, and reporting 0 would be a lie. Leaving `cacheContent` empty
+        // makes the matching ffPackagesWriteCache() call a no-op.
+        return false;
+    }
+
+    ffStrbufSet(cacheDir, &instance.state.platform.cacheDir);
+    ffStrbufEnsureEndsWithC(cacheDir, '/');
+    ffStrbufAppendF(cacheDir, "fastfetch/packages/%s.txt", packageId);
+
+    if (ffReadFileBuffer(cacheDir->chars, cacheContent)) {
+        uint64_t key_cached;
+        uint32_t num_cached;
+        if (sscanf(cacheContent->chars, "%" SCNu64 " %" SCNu32, &key_cached, &num_cached) == 2 &&
+            key_cached == cacheKey && num_cached > 0) {
+            *result = num_cached;
+            return true;
+        }
+    }
+
+    ffStrbufSetF(cacheContent, "%" PRIu64 " ", cacheKey);
+
+    return false;
+}
+
 bool ffPackagesReadCache(FFstrbuf* cacheDir, FFstrbuf* cacheContent, const char* filePath, const char* packageId, uint32_t* result) {
     const uint64_t mtime_current = ffPathGetMtime(filePath);
     if (__builtin_expect(mtime_current == 0, false)) {
@@ -31,23 +58,7 @@ bool ffPackagesReadCache(FFstrbuf* cacheDir, FFstrbuf* cacheContent, const char*
         return true;
     }
 
-    ffStrbufSet(cacheDir, &instance.state.platform.cacheDir);
-    ffStrbufEnsureEndsWithC(cacheDir, '/');
-    ffStrbufAppendF(cacheDir, "fastfetch/packages/%s.txt", packageId);
-
-    if (ffReadFileBuffer(cacheDir->chars, cacheContent)) {
-        uint64_t mtime_cached;
-        uint32_t num_cached;
-        if (sscanf(cacheContent->chars, "%" SCNu64 " %" SCNu32, &mtime_cached, &num_cached) == 2 &&
-            mtime_cached == mtime_current && num_cached > 0) {
-            *result = num_cached;
-            return true;
-        }
-    }
-
-    ffStrbufSetF(cacheContent, "%" PRIu64 " ", mtime_current);
-
-    return false;
+    return ffPackagesReadCacheKey(cacheDir, cacheContent, mtime_current, packageId, result);
 }
 
 bool ffPackagesWriteCache(FFstrbuf* cacheDir, FFstrbuf* cacheContent, uint32_t num_elements) {
@@ -59,7 +70,71 @@ bool ffPackagesWriteCache(FFstrbuf* cacheDir, FFstrbuf* cacheContent, uint32_t n
     return ffWriteFileBuffer(cacheDir->chars, cacheContent);
 }
 
-#ifndef _WIN32
+#if __linux__
+#include <sys/syscall.h>
+
+struct linux_dirent64 {
+    uint64_t       d_ino;    /* 64-bit inode number */
+    int64_t        d_off;    /* Not an offset; see getdents() */
+    unsigned short d_reclen; /* Size of this dirent */
+    unsigned char  d_type;   /* File type */
+    char           d_name[]; /* Filename (null-terminated) */
+};
+
+uint32_t ffPackagesGetNumElements(const char* dirname, bool isdir) {
+    FF_AUTO_CLOSE_FD int fd = open(dirname, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+    if (fd < 0) {
+        return 0;
+    }
+
+    alignas(struct linux_dirent64) uint8_t bytes[64 * 1024];
+
+    uint32_t num_elements = 0;
+    const size_t nameOffset = offsetof(struct linux_dirent64, d_name);
+
+    for (;;) {
+        long bytesRead = syscall(SYS_getdents64, fd, bytes, sizeof(bytes));
+        if (bytesRead < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+            break;
+        }
+        if (bytesRead == 0) {
+            break;
+        }
+
+        size_t remaining = (size_t) bytesRead;
+        struct linux_dirent64* entry = (struct linux_dirent64*) bytes;
+
+        while (remaining >= nameOffset + 1) {
+            bool ok = false;
+            if (entry->d_name[0] != '.') {
+                if (__builtin_expect(entry->d_type != DT_UNKNOWN && entry->d_type != DT_LNK, true)) {
+                    ok = entry->d_type == (isdir ? DT_DIR : DT_REG);
+                } else {
+                    struct stat stbuf;
+                    if (fstatat(fd, entry->d_name, &stbuf, 0) == 0) {
+                        ok = isdir ? S_ISDIR(stbuf.st_mode) : S_ISREG(stbuf.st_mode);
+                    }
+                }
+            }
+
+            num_elements += ok;
+            size_t recordLength = entry->d_reclen;
+            remaining -= recordLength;
+            entry = (struct linux_dirent64*) ((uint8_t*) entry + recordLength);
+        }
+
+        if (remaining != 0) {
+            break;
+        }
+    }
+
+    return num_elements;
+}
+
+#elif !_WIN32
 uint32_t ffPackagesGetNumElements(const char* dirname, bool isdir) {
     FF_AUTO_CLOSE_DIR DIR* dirp = opendir(dirname);
     if (dirp == nullptr) {

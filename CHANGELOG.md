@@ -1,91 +1,78 @@
+# Unreleased
+
+Changes:
+* LocalIP flags on Windows now describe the interface itself — its operational status, its media connection state and its type, for example `ETHERNET_CSMACD`, `IEEE80211` or `SOFTWARE_LOOPBACK` — instead of the `IP_ADAPTER_*` bits.
+
+Features:
+* Improved performance of LocalIP, NetIO and DNS on Windows
+
+Bugfixes:
+* Fixed `--config`/`-c` bash completion offering one candidate per word instead of one candidate per file for paths containing spaces. (Completion, Bash)
+* Fixed external monitors detected via DDC/CI being randomly reported as built-in, and libddcutil trace messages occasionally leaking into the output and breaking `--format json`. (#2615, Brightness / Linux)
+* Fixed the Vulkan driver name being concatenated with the driver name of a previously enumerated device on systems with more than one GPU. (#2619, Vulkan)
+
 # 2.69.0
 
 Changes:
-* ImageMagick is no longer used for image logos on Windows, macOS and Android, and has been replaced by the platform image frameworks (WIC on Windows, ImageIO on macOS, AImageDecoder on Android). (Logo)
-    * An image logo needs Android 11 (API 30), the release that introduced the platform image decoder, and is reported as an error on Android 10 and older.
-* ImageMagick 6 support is deprecated. It is kept only for old Debian and Ubuntu releases that don't have ImageMagick 7 available.
-    * It is intended to be removed in a future release. Users are encouraged to upgrade to ImageMagick 7 when possible.
-
-* The `--logo-recache` option has been replaced by `--logo-cache <bool|regen>`, and the `logo.recache` JSON property has been renamed to `logo.cache`. (Logo)
-    * `--logo-cache true` (the default) reuses a cached rendering when it is valid, and writes it back on a cache miss.
-    * `--logo-cache false` ignores the image logo cache completely: nothing is read from it and nothing is written to it.
-    * `--logo-cache regen` does what `--logo-recache true` used to do.
-    * `logo.cache` accepts a boolean, or the string `"regen"`.
-* The `waitTime` option of `DiskIO` and `NetIO` now defaults to `250` ms instead of `500`. (DiskIO / NetIO)
-    * The byte counters are maintained by the kernel as I/O happens, so a shorter sampling window still yields an accurate rate, and both modules now finish about 250 ms sooner.
-    * Note that the two modules wait concurrently, so enabling both does not cost twice the wait time.
+* ImageMagick 6 is deprecated and will be removed in a future release. It remains available for older Debian and Ubuntu releases; upgrade to ImageMagick 7 when possible.
+* The experimental QuickJS format scripting is deprecated, disabled by default, and planned for removal in the next release. Re-enable it with `cmake -DENABLE_QUICKJS=ON`, or migrate scripts to Lua. (General)
+* Replaced `--logo-recache` and `logo.recache` with `--logo-cache` and `logo.cache`. Use `true` to reuse or create valid cache entries, `false` to disable caching, or `regen` to force regeneration. (Logo)
+* Modules selected with `--structure` now honor their options from the JSON config.
 
 Features:
-* Improved image logo support
-    * Backend rewritten
-        * Added a native image decoding backend on Windows (WIC), macOS (ImageIO) and Android (AImageDecoder).
-        * Added an embedded libsixel encoder, used to produce sixel output on Windows, macOS and Android. It is reported by `fastfetch --list-features` as "Embedded sixel".
-        * Enabled chafa image output on Windows, macOS and Android independently of ImageMagick.
-        * As a result, `fastfetch --sixel X:\path\to\image` now works out of the box on Windows Terminal.
-    * Image logo cache entries are now validated against the modification time of the source image. (Logo)
-        * Editing an image logo in place now invalidates its cached rendering.
-        * Cache entries written by older versions are not reused, as they carry no modification time.
-    * Image logos can now be animated when the terminal and the image protocol support it. (Logo)
-        * `--logo-animation-frame <0>` (`logo.animationFrame: 0` in the JSON config) plays a GIF or APNG. Only the `kitty` image protocol can play an animation; the frames are decoded and composed by fastfetch, so no external program is involved.
-        * `--logo-animation-frame <N>` renders the Nth frame as a still image, and negative values count back from the end, so `-1` is the last frame. This works for the `sixel`, `kitty` and `chafa` logo types. Note that negative values can only be given in the JSON config, as the command line parser reads a leading `-` as another option.
-        * The default is `1`, which renders a still image, so nothing changes for anyone who does not opt in.
-        * The frames come from the platform image framework (WIC on Windows, ImageIO on macOS, AImageDecoder on Android, ImageMagick 7 on Linux). A single-frame GIF falls back to a still image.
-        * On Android an animation needs Android 12 (API 31). The repeat count is not available there, so an animation is reported as looping forever. A build with no image decoder, or one built with ImageMagick 6, reports an error instead of silently showing a still image.
-        * A terminal that supports the kitty graphics protocol but not its animation frames, such as Konsole, shows the first frame.
-    * Added the CMake option `ENABLE_IMAGE_LOGO`, which defaults to `ON`. Configure with `-DENABLE_IMAGE_LOGO=OFF` to build fastfetch without any image logo support. (Logo)
-        * Image logos are the only consumer of ImageMagick, chafa, and the embedded libsixel encoder, so none of the three is searched for at configure time, and no image decoding sources are compiled in.
-        * The `sixel`, `kitty`, `kitty-direct`, `kitty-icat`, `iterm` and `chafa` logo types are rejected with an error, both on the command line and in the JSON config, and the `auto` logo type never tries an image.
-        * `--logo-type raw` keeps working: it passes a pre-rendered byte stream through unchanged and needs no decoder, so a logo can still be displayed by converting the image externally.
-        * This is intended only to reduce binary size on embedded systems (such as OpenWrt).
-* Added CPU name and frequency detection support on SPARC. (CPU, Linux)
-* Added package detection support for CRUX. (Packages, Linux)
-    * Exposed in custom format as `{crux}`.
-* Improved Android ROM detection (DE, Android)
-    * Added support for HarmonyOS, HarmonyOS NEXT, Flyme, JOYUI, SmartisanOS, realme UI, HydrogenOS, ZUI, ZUXOS, MyOS, NebulaAIOS, ObricUI, MiFavor, LineageOS, PixelExperience, EUI and 360 UI.
-    * Added support for MagicUI 3.x, which stores a bare version number instead of a `MagicUI_x.y.z` string.
-    * Added Samsung OneUI support (#2541)
-    * It is read from system properties, so no particular Android version is required.
-    * This is mostly untested due to lack of available devices running these ROMs. Please report any issues you encounter.
-* Improved Camera detection on Android (Camera, Android)
-    * The camera list is now read from the camera2 NDK instead of `termux-api CameraInfo`, so the Termux:API app is no longer required and no subprocess is spawned.
-    * This needs Android 7.0 (API 24), which is where the camera2 NDK was introduced.
-* Improved Battery detection on Android (Battery, Android)
-    * The charge level and charging state are now read from the battery properties service over `/dev/binder` instead of `termux-api BatteryStatus`, so the Termux:API app is no longer required and no subprocess is spawned.
-    * The service interface changed in Android 10, and the right request is picked at run time, so every Android release is covered.
-    * Battery temperature, cycle count, manufacturer, model name, serial number and manufacture date need the `BATTERY_STATS` permission, which an app cannot obtain, so they are no longer reported.
-* Improved Display detection on Android (Display, Android)
-    * The displays are now read from the display service instead of a vendor property that only some Xiaomi devices set. The preferred mode, the physical size, the rotation, the manufacture date and the display id are now reported as well.
-    * This needs Android 13 (API 33). On Android 12 and older only that vendor property is available to an app, and a device that does not set it reports no display.
-    * The refresh rate is now the rate of the active display mode, and the HDR capability is read from the display itself, for every display rather than only for the built-in one.
-* Improved WiFi detection on Android (Wifi, Android)
-    * The connection details are now read from the WiFi service over `/dev/binder` instead of `termux-api WifiConnectionInfo`, so the Termux:API app is no longer required and no subprocess is spawned.
-    * The interface name and its state, the connection state and the Wi-Fi standard are now reported as well.
-    * This needs Android 11 (API 30), the release that moved the Wi-Fi framework into an APEX. There is no fallback, so Android 10 and older report an error instead.
-* Improved COSMIC detection (DE / WM, Linux)
-    * The version is now read from the `COSMIC_VERSION` environment variable when it is set.
-* Improved accuracy and performance of process name detection in the Top module. (Top, macOS)
-* Improved Packages detection on Windows (Packages, Windows)
-    * `winget list` is now invoked with `--source winget`, so only packages installed by winget itself are counted, and the slow msstore HTTP round trips are skipped.
-* Improved Wallpaper detection on macOS Sonoma and later (#2559, Wallpaper, macOS)
-    * The image path is now also extracted from the `Configuration` field of the wallpaper plist, and the `NSWorkspace` fallback is used only as a last resort.
-* Removed the `kvm` dependency on OpenBSD by using `sysctl` directly. (General, OpenBSD)
-* Modules that were selected on the command line via `--structure` / `-s` now honor module options configured in the JSON config. (CommandOption)
-* Improved reliability of fastfetch's built-in HTTP client. (PublicIP, Weather)
-    * It now supports custom ports and can properly handle chunked transfer encoding.
-    * It is designed for minimal resource usage and fast performance. It does not support full HTTP features like HTTPS. Users can always use the `Command` module with `curl` to achieve similar functionality.
-* Added Umbriel wayland compositor version detection (WM, Linux)
+* Added `logo.position: "auto"` and `--logo-position auto` to place wide logos above module output when the terminal has less than 32 columns available for text. (Logo)
+    * The position can also be selected in interactive `--gen-config`. 
+    * For now, the default position is `left` for compatibility with previous releases. This may change to `auto` in future releases.
+* Improved Bluetooth detection support:
+    * Added Bluetooth Low Energy detection on Windows and macOS.
+    * Report device type (LE or classic) and signal quality, if available.
+    * Added Bluetooth Core 6.0–6.3 version reporting. (BluetoothRadio)
+* Improved image log support:
+    * Image logos on Windows, macOS, and Android now use native image processing libraries instead of ImageMagick. 
+        * For package managers: ImageMagick dependencies can be removed on macOS, Windows and Android as they are no longer used for image logos.
+        * Windows Terminal supports sixel logos out of the box
+    * Changes to a source image now correctly invalidate its cache. (Logo)
+    * Added GIF and APNG support to `--kitty` image protocol. Set `logo.animationFrame` to `0` to play animations in compatible kitty terminals; positive or negative values select a still frame. Android animation requires Android 12 (API 31); terminals without kitty graphics protocol support report an error and fall back to the built-in logo instead. (Logo)
+    * Added cmake option `-DENABLE_IMAGE_LOGO=<BOOL>` (default `ON`) to disable image logos and reduce binary size. `raw` logos remain available. (Logo)
+* Improved Linux support:
+    * Added RakuOS rum overlay package counting (`{rum}`) and CRUX package detection (`{crux}`). (Packages)
+    * Added CPU name and frequency detection on SPARC. (CPU)
+    * Improved COSMIC version detection and added Umbriel version detection. (DE / WM)
+* Improved Android support:
+    * Expanded ROM detection to HarmonyOS, Flyme, OneUI, LineageOS, and many other ROMs. (DE)
+    * Improved camera detection; Android 7 (API 24) or later is required. (Camera)
+    * Battery level and charging state are now available to apps; detailed battery information requires root or ADB. (Battery)
+    * Added display mode, physical size, rotation, and HDR information. App-based detection requires Android 13 (API 33); root or ADB can also detect displays on older versions. (Display)
+    * Added Wi-Fi interface, connection, standard, and security information. Android 11 (API 30) or later is required. Termux:API is needed for the Wi-Fi permission, and location permission is needed to reveal SSID and BSSID; without location permission the two names appear as `<redacted>`. (Wifi)
+    * Added Wallpaper detection, which effectively reports `/data/system/users/0/wallpaper`. (Wallpaper)
+    * Added Media detection, root/ADB only. (Media / Player)
+* Improved macOS support:
+    * Improved process-name detection in Top. (Top)
+    * Improved wallpaper detection on macOS Sonoma and later. (#2559, Wallpaper)
+* Improved Windows support:
+    * `winget` now counts packages from configured sources, excludes Microsoft Store apps, and caches results. It remains disabled by default. (Packages)
+    * Player names now match the names shown by Windows (for example, Chrome is reported as Google Chrome). (Player)
+* Added battery-level detection for more controllers on Windows and macOS. (Gamepad)
+* Improved macOS controller name detection (macOS, Gamepad)
+    * macOS controller names now match the system; configs that filter by name may need updating.
+    * Requires macOS 11 or later.
+* Improved the built-in HTTP client used by PublicIP and Weather; it now supports custom ports and chunked responses. (PublicIP / Weather)
+* Reduced the default `waitTime` for DiskIO, NetIO, and Top from 500 ms to 250 ms. (DiskIO / NetIO / Top)
+* Added `general.preload.lua` for loading shared Lua helpers before modules run. It requires a Lua-enabled build and starts the Lua interpreter whenever configured. (General)
+    * Lua format scripting is now considered stable.
 
 Bugfixes:
-* Fixed Base64 encoding producing incorrect output for some inputs. (General)
-* Fixed image logos not working when ImageMagick is built without a quantum depth suffix in its library name, as is the case on FreeBSD. (Logo, FreeBSD)
-* Fixed TerminalFont detection on Windows ignoring Windows Terminal JSON fragment files. (#2573, TerminalFont, Windows)
-* Fixed 64-bit values being truncated by `strtoul` on platforms where `unsigned long` is 32-bit. (Swap / PhysicalDisk / PhysicalMemory / GPU)
-* Fixed read-only SQLite databases failing with `SQLITE_READONLY` when the database directory is not writable. (Packages)
-    * This fixes PKG package count detection on FreeBSD.
-* Fixed `{#keys}` and `{#title}` in module format strings not honoring the `brightColor` display option. (Format)
-* Fixed `paddingTop` and `paddingLeft` being ignored by the `kitty-icat` image logo type. (Logo)
-* Fixed issues when running on big-endian platforms.
-* Some internal cleanups and optimizations.
+* Fixed Snapdragon X2 series model detection on Linux. (#2611, CPU / Linux)
+* Fixed image logo caching, padding, and positioning issues, including an iTerm display bug. (Logo)
+* Fixed several Windows issues, including Windows Terminal font detection, redirected `--gen-config` output, and gamepad battery reporting for DualShock 4 and Switch controllers. (#2573, TerminalFont; Gamepad; General)
+* Fixed formatting and display issues, including ANSI-aware truncation, date/time formatting, and bright key/title colors. (Format / DateTime / Display)
+* Fixed `--dynamic-interval` retries and stale results across multiple rounds. (PublicIP / Weather / Display / Monitor / WM / DE / Media / Player / Shell / Terminal)
+* Fixed invalid numeric and color options that could cause hangs or excessive output. (Separator / CPUUsage / NetIO / DiskIO / LoadAvg / Colors)
+* Fixed JSON output and config validation across several modules, including GPU, Btrfs, Gamepad, Packages, and Custom. (General)
+* Fixed GPU memory and device-type reporting, GNOME Classic and Trinity version detection, and default-route family names. (GPU / DE / LocalIP)
+* Fixed module output and filtering issues affecting editor failures, sound status, command selection, and ignored keyboard/gamepad devices. (Editor / Sound / Command / Keyboard / Gamepad)
+* Fixed package counting with read-only databases and corrected other package detection and JSON output issues. (Packages)
+* Fixed Base64 encoding, big-endian handling, and 64-bit value truncation on 32-bit platforms. (General)
 
 Logos:
 * Added ALT Atomic

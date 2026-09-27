@@ -98,12 +98,16 @@ cmake_dependent_option(ENABLE_ELF "Enable libelf" ON "LINUX OR ANDROID OR Dragon
 cmake_dependent_option(ENABLE_THREADS "Enable multithreading" ON "Threads_FOUND" OFF)
 
 option(ENABLE_IMAGE_LOGO "Enable image logos (sixel / kitty / iTerm / chafa)" ON)
-if(ENABLE_IMAGE_LOGO)
-    cmake_dependent_option(ENABLE_IMAGEMAGICK7 "Enable imagemagick 7" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR SunOS OR Haiku OR GNU" OFF)
-    cmake_dependent_option(ENABLE_IMAGEMAGICK6 "Enable imagemagick 6" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR SunOS OR GNU" OFF)
-    cmake_dependent_option(ENABLE_SIXEL "Enable sixel logo output via the embedded libsixel encoder (Windows, macOS and Android; replaces ImageMagick's SIXEL coder)" ON "WIN32 OR APPLE OR ANDROID" OFF)
-    cmake_dependent_option(ENABLE_CHAFA "Enable chafa" ON "ENABLE_IMAGEMAGICK6 OR ENABLE_IMAGEMAGICK7 OR WIN32 OR APPLE OR ANDROID" OFF)
-endif()
+# The four below are declared outside the guard on purpose. `cmake_dependent_option` is a macro: when
+# the condition is false it is never expanded, so nothing rewrites the value already sitting in
+# CMakeCache.txt, and `cmake -DENABLE_IMAGE_LOGO=OFF .` in an existing build directory would leave
+# ENABLE_SIXEL=ON behind -- sixel and chafa would still be compiled and linked while image.c, the
+# only file that uses them, is not. The condition does the disabling instead: it is the fourth
+# argument's job, and it keeps the option visible and settable in cmake-gui either way.
+cmake_dependent_option(ENABLE_IMAGEMAGICK7 "Enable imagemagick 7" ON "ENABLE_IMAGE_LOGO;LINUX OR FreeBSD OR OpenBSD OR NetBSD OR SunOS OR Haiku OR GNU" OFF)
+cmake_dependent_option(ENABLE_IMAGEMAGICK6 "Enable imagemagick 6" ON "ENABLE_IMAGE_LOGO;LINUX OR FreeBSD OR OpenBSD OR NetBSD OR SunOS OR GNU" OFF)
+cmake_dependent_option(ENABLE_SIXEL "Enable sixel logo output via the embedded libsixel encoder (Windows, macOS and Android; replaces ImageMagick's SIXEL coder)" ON "ENABLE_IMAGE_LOGO;WIN32 OR APPLE OR ANDROID" OFF)
+cmake_dependent_option(ENABLE_CHAFA "Enable chafa" ON "ENABLE_IMAGE_LOGO;ENABLE_IMAGEMAGICK6 OR ENABLE_IMAGEMAGICK7 OR WIN32 OR APPLE OR ANDROID" OFF)
 
 option(ENABLE_ZLIB "Enable zlib" ON)
 option(ENABLE_SYSTEM_YYJSON "Use system provided (instead of fastfetch embedded) yyjson library" OFF)
@@ -119,7 +123,7 @@ option(ENABLE_EMBEDDED_PCIIDS "Embed pci.ids into fastfetch, requires `python`" 
 option(ENABLE_EMBEDDED_AMDGPUIDS "Embed amdgpu.ids into fastfetch, requires `python`" OFF)
 option(ENABLE_WORDEXP "Enable using of wordexp(3) if available, instead of glob(3)" ON)
 option(ENABLE_LUA "Enable lua scripting for format strings" ON)
-option(ENABLE_QUICKJS "Enable quickjs scripting for format strings" ON)
+option(ENABLE_QUICKJS "Enable quickjs scripting for format strings" OFF)
 option(ENABLE_LIBZFS "Enable libzfs" ON)
 option(ENABLE_WCWIDTH "Detect wide-width characters with wcwidth when calculating logo and separator width. Disable for a smaller and slightly faster build, but logos containing CJK/emoji may be measured too narrow and render incorrectly. Such usecases are uncommon." ON)
 set(DEFAULT_STRUCTURE "Title:Separator:OS:Host:Kernel:Uptime:Packages:Shell:Display:DE:WM:WMTheme:Theme:Icons:Font:Cursor:Terminal:TerminalFont:CPU:GPU:Memory:Swap:Disk:LocalIp:Battery:PowerAdapter:Locale:Break:Colors" CACHE STRING "Default module structure for detection")
@@ -135,14 +139,29 @@ endif()
 # other leftovers, and makes `CONFIGURE_DEPENDS` react to added or removed sources.
 file(GLOB FF_MODULE_SRCS CONFIGURE_DEPENDS RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/src/modules" "${CMAKE_CURRENT_SOURCE_DIR}/src/modules/*/*.c")
 set(FF_MODULE_DIRS "")
+set(FF_MODULE_SRC_DIRS "")
 foreach(FF_MODULE_SRC ${FF_MODULE_SRCS})
     get_filename_component(FF_MODULE_DIR "${FF_MODULE_SRC}" DIRECTORY)
     get_filename_component(FF_MODULE_NAME "${FF_MODULE_SRC}" NAME_WE)
     if("${FF_MODULE_DIR}" STREQUAL "${FF_MODULE_NAME}")
         list(APPEND FF_MODULE_DIRS "${FF_MODULE_DIR}")
     endif()
+    list(APPEND FF_MODULE_SRC_DIRS "${FF_MODULE_DIR}")
 endforeach()
 unset(FF_MODULE_SRCS)
+
+# A directory of sources whose name no source carries registers no module at all, and nothing else
+# in the build says so -- the module simply never appears. Reported rather than left to be noticed.
+# Directories are compared rather than sources, so that a module which keeps helper sources next to
+# its own `<module>.c` does not warn about every one of them.
+list(REMOVE_DUPLICATES FF_MODULE_SRC_DIRS)
+foreach(FF_MODULE_DIR ${FF_MODULE_SRC_DIRS})
+    if(NOT FF_MODULE_DIR IN_LIST FF_MODULE_DIRS)
+        message(WARNING "src/modules/${FF_MODULE_DIR}/ contains C sources but no ${FF_MODULE_DIR}.c, "
+            "so no module is registered for it. A module directory must hold a source file named after it.")
+    endif()
+endforeach()
+unset(FF_MODULE_SRC_DIRS)
 
 foreach(FF_MODULE_DIR ${FF_MODULE_DIRS})
     string(TOUPPER "${FF_MODULE_DIR}" FF_MODULE_UPPER)
@@ -466,6 +485,7 @@ set(LIBFASTFETCH_SRC
     src/common/impl/time.c
     src/common/impl/edidHelper.c
     src/common/impl/base64.c
+    src/common/impl/FFcache.c
     src/common/impl/FFlist.c
     src/common/impl/FFstrbuf.c
     src/common/impl/path.c
@@ -519,6 +539,11 @@ if(ENABLE_IMAGE_LOGO)
         src/logo/image/im7.c
         src/logo/image/sixel.c
     )
+    if(ANDROID)
+        list(APPEND LIBFASTFETCH_SRC
+            src/logo/image/aid.c
+        )
+    endif()
 endif()
 
 foreach(FF_MODULE_DIR ${FF_MODULE_DIRS})
@@ -617,6 +642,7 @@ elseif(ANDROID)
     list(APPEND LIBFASTFETCH_SRC
         src/common/android/binder.c
         src/common/android/dex.c
+        src/common/android/package.c
         src/common/impl/dbus.c
         src/common/impl/io_unix.c
         src/common/impl/netif_linux.c
@@ -670,6 +696,7 @@ elseif(ANDROID)
         src/detection/locale/locale_linux.c
         src/detection/localip/localip_linux.c
         src/detection/gamepad/gamepad_nosupport.c
+        src/detection/media/media_android.c
         src/detection/media/media_linux.c
         src/detection/memory/memory_linux.c
         src/detection/mouse/mouse_nosupport.c
@@ -691,13 +718,13 @@ elseif(ANDROID)
         src/detection/tpm/tpm_nosupport.c
         src/detection/uptime/uptime_linux.c
         src/detection/users/users_linux.c
+        src/detection/wallpaper/wallpaper_android.c
         src/detection/wallpaper/wallpaper_linux.c
         src/detection/wifi/wifi_android.c
         src/detection/wm/wm_linux.c
         src/detection/de/de_linux.c
         src/detection/wmtheme/wmtheme_linux.c
         src/detection/camera/camera_android.c
-        src/logo/image/aid.c
     )
 elseif(FreeBSD)
     list(APPEND LIBFASTFETCH_SRC
@@ -1008,7 +1035,7 @@ elseif(APPLE)
         src/detection/libc/libc_apple.c
         src/detection/locale/locale_linux.c
         src/detection/localip/localip_linux.c
-        src/detection/gamepad/gamepad_apple.c
+        src/detection/gamepad/gamepad_apple.m
         src/detection/media/media_apple.m
         src/detection/memory/memory_apple.c
         src/detection/mouse/mouse_apple.c
@@ -1074,10 +1101,12 @@ elseif(WIN32)
         src/common/windows/registry.c
         src/common/windows/unicode.c
         src/common/windows/variant.cpp
+        src/common/windows/winrt.cpp
         src/common/windows/version.c
         src/detection/battery/battery_windows.c
         src/detection/bios/bios_windows.c
         src/detection/bluetooth/bluetooth_windows.c
+        src/detection/bluetooth/bluetooth_windows.cpp
         src/detection/bluetoothradio/bluetoothradio_windows.c
         src/detection/board/board_windows.c
         src/detection/bootmgr/bootmgr_windows.c
@@ -1346,7 +1375,7 @@ elseif(GNU)
         src/detection/keyboard/keyboard_nosupport.c
         src/detection/libc/libc_linux.c
         src/detection/lm/lm_linux.c
-        src/detection/loadavg/loadavg_linux.c
+        src/detection/loadavg/loadavg_sunos.c
         src/detection/locale/locale_linux.c
         src/detection/localip/localip_linux.c
         src/detection/gamepad/gamepad_nosupport.c
@@ -1907,23 +1936,25 @@ if(LINUX)
 elseif(APPLE)
     target_link_libraries(libfastfetch
         PRIVATE "-framework AVFoundation"
+        PRIVATE "-framework Accelerate"
         PRIVATE "-framework Cocoa"
-        PRIVATE "-framework CoreFoundation"
         PRIVATE "-framework CoreAudio"
+        PRIVATE "-framework CoreBluetooth"
+        PRIVATE "-framework CoreFoundation"
         PRIVATE "-framework CoreMedia"
         PRIVATE "-framework CoreVideo"
-        PRIVATE "-framework ImageIO"
-        PRIVATE "-framework Accelerate"
         PRIVATE "-framework CoreWLAN"
+        PRIVATE "-framework GameController"
         PRIVATE "-framework IOBluetooth"
         PRIVATE "-framework IOKit"
+        PRIVATE "-framework ImageIO"
         PRIVATE "-framework Metal"
-        PRIVATE "-framework OpenGL"
         PRIVATE "-framework OpenCL"
+        PRIVATE "-framework OpenGL"
         PRIVATE "-framework SystemConfiguration"
         PRIVATE "-framework VideoToolbox"
-        PRIVATE "-weak_framework CoreDisplay"
 
+        PRIVATE "-weak_framework CoreDisplay"
         PRIVATE "-F /System/Library/PrivateFrameworks"
         PRIVATE "-weak_framework DisplayServices"
         PRIVATE "-weak_framework MediaRemote"
@@ -1942,8 +1973,17 @@ elseif(WIN32)
         PRIVATE "cfgmgr32"
         PRIVATE "winbrand"
         PRIVATE "secur32"
-        PRIVATE "windowscodecs"
+        PRIVATE "shlwapi"
     )
+    if(ENABLE_IMAGE_LOGO)
+        # Only src/logo/image/wic.cpp uses WIC, and that file is only compiled with image logos
+        # enabled (see the WIN32 source list above). Verified by building with
+        # `-DENABLE_IMAGE_LOGO=OFF` and removing the library from the link line: it links and runs
+        # without it, and nothing else in the tree references IWIC*.
+        target_link_libraries(libfastfetch
+            PRIVATE "windowscodecs"
+        )
+    endif()
     if(NOT ENABLE_WIN81_COMPAT)
         target_link_libraries(libfastfetch
             PRIVATE "mincore"
@@ -2024,14 +2064,35 @@ elseif(ANDROID)
         endif()
     endif()
 
-    # Both APIs (AImageDecoder, AMediaCodec) are newer than the API level this build targets --
-    # AImageDecoder is 30, and AMediaCodec_getName / AMediaCodec_releaseName are 28 -- while fastfetch
-    # keeps running on devices below those levels. The NDK headers mark the entry points unavailable, so
-    # they have to be weak references: otherwise the executable would fail to load on an older device.
-    # Guarding every use with __builtin_available() is what makes that safe, and turning the guard
-    # diagnostic into an error is what keeps a use from slipping past it.
+    # Three APIs are newer than the API level this build targets: AImageDecoder is 30,
+    # AndroidBitmap_compress is 30, and AMediaCodec_getName / AMediaCodec_releaseName are 28.
+    # fastfetch keeps running on devices below those levels, and the NDK headers mark the entry
+    # points unavailable there, so they have to be weak references -- a strong reference would fail
+    # the load on an older device. Guarding every use with __builtin_available() is what makes that
+    # safe, and turning the guard diagnostic into an error keeps a use from slipping past it.
+    #
+    # Each one lives in the library that provides it, and that library is linked above:
+    # AImageDecoder_* and AndroidBitmap_compress are exported by libjnigraphics.so, and
+    # AMediaCodec_* by libmediandk.so. Checked on a device (Android 16, API 36) with
+    # `readelf --dyn-syms /system/lib64/libjnigraphics.so` and a dlopen/dlsym probe: every
+    # AImageDecoder_* entry point resolves there and none of them resolves in libandroid.so, which
+    # is why libandroid.so is *not* linked -- nothing fastfetch calls comes from it. Keep the
+    # provider library linked for the reason the NDK requires it: an undefined weak symbol resolves
+    # to NULL rather than failing the load, and FF_ANDROID_API_AT_LEAST() reads the platform level,
+    # not the symbol, so it would send the call straight through a NULL pointer on every device new
+    # enough to pass the guard.
+    #
+    # camera_android.c is deliberately not in this list. The camera2 NDK is a *library* that starts at
+    # API 24, and a weak reference weakens the symbol, never the library: DT_NEEDED would still name
+    # libcamera2ndk.so, and a device below API 24 would fail to load fastfetch at all. The NDK's guide
+    # is explicit that there is no such thing as a weak library reference, and that dlopen is the only
+    # way to reach a library newer than minSdkVersion. Nothing here pins ANDROID_PLATFORM, so a build
+    # aimed below 24 would need that; on the supported path -- Termux, which targets 24 -- the library
+    # is always present and the plain call is correct. libjnigraphics itself is one of them and is
+    # linked unconditionally above, so the encoder only needs its symbol weakened, not its library.
     set_source_files_properties(
         ${CMAKE_CURRENT_SOURCE_DIR}/src/logo/image/aid.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/detection/media/media_android.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/detection/codec/codec_android.c
         PROPERTIES COMPILE_OPTIONS "-D__ANDROID_UNAVAILABLE_SYMBOLS_ARE_WEAK__;-Werror=unguarded-availability")
 elseif(Haiku)
@@ -2200,6 +2261,29 @@ endif()
 ###################
 
 if (BUILD_TESTS)
+    add_executable(fastfetch-test-cache
+        tests/cache.c
+    )
+    target_link_libraries(fastfetch-test-cache
+        PRIVATE libfastfetch
+    )
+
+    add_executable(fastfetch-test-logo
+        tests/logo.c
+    )
+    target_link_libraries(fastfetch-test-logo
+        PRIVATE libfastfetch
+    )
+
+    if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        add_executable(fastfetch-test-cpu
+            tests/cpu.c
+        )
+        target_link_libraries(fastfetch-test-cpu
+            PRIVATE libfastfetch
+        )
+    endif()
+
     add_executable(fastfetch-test-strbuf
         tests/strbuf.c
     )
@@ -2313,6 +2397,11 @@ if (BUILD_TESTS)
     )
 
     enable_testing()
+    if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        add_test(NAME test-cpu COMMAND fastfetch-test-cpu)
+    endif()
+    add_test(NAME test-cache COMMAND fastfetch-test-cache)
+    add_test(NAME test-logo COMMAND fastfetch-test-logo)
     add_test(NAME test-strbuf COMMAND fastfetch-test-strbuf)
     add_test(NAME test-list COMMAND fastfetch-test-list)
     add_test(NAME test-format COMMAND fastfetch-test-format)

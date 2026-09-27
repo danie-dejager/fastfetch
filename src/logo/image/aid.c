@@ -10,6 +10,7 @@
 #include <fcntl.h>
 #include <stdint.h>
 #include <string.h>
+#include <unistd.h>
 
 static inline bool androidImageDecoderError(const char** error, const char* message) {
     if (error) {
@@ -66,7 +67,7 @@ static uint8_t* androidPackFrame(const uint8_t* src, size_t stride, uint32_t wid
 
 // Everything the still and the animation path share: read the source size, resolve the requested
 // pixel size, ask for RGBA8888 and let the decoder do the scaling.
-FF_REQUIRES_API(30) static bool androidResolveDecoder(AImageDecoder* decoder, FFLogoRequestData* requestData, size_t* outStride, bool* outPremultiplied, const char** error) {
+FF_ANDROID_REQUIRES_API(30) static bool androidResolveDecoder(AImageDecoder* decoder, FFLogoRequestData* requestData, size_t* outStride, bool* outPremultiplied, const char** error) {
     const AImageDecoderHeaderInfo* header = AImageDecoder_getHeaderInfo(decoder);
     // Both are int32_t, and anything <= 0 is not a usable source
     const int32_t sourceWidth = AImageDecoderHeaderInfo_getWidth(header);
@@ -123,7 +124,7 @@ FF_REQUIRES_API(30) static bool androidResolveDecoder(AImageDecoder* decoder, FF
 bool ffImageCreateAID(FFLogoRequestData* requestData, FFImageBuffer* out, const char** error) {
     // AImageDecoder is API 30, and fastfetch still runs on devices below that, so this is a real
     // run-time check and not a compile-time constant. See common/android/api.h for why.
-    if (FF_API_AT_LEAST(30)) {
+    if (FF_ANDROID_API_AT_LEAST(30)) {
         FF_AUTO_CLOSE_FD int fd = open(instance.config.logo.source.chars, O_RDONLY | O_CLOEXEC);
         if (fd < 0) {
             return androidImageDecoderError(error, "failed to open the image source");
@@ -206,6 +207,7 @@ bool ffImageCreateAID(FFLogoRequestData* requestData, FFImageBuffer* out, const 
 
 typedef struct FFAndroidAnimation {
     AImageDecoder* decoder;
+    int fd; // the source the decoder keeps reading from while frames are decoded
     uint8_t* canvas; // the decoder's buffer; every frame is blended into what is already in it
     size_t stride;
     size_t size;
@@ -217,7 +219,7 @@ typedef struct FFAndroidAnimation {
     int32_t* delaysCs; // one per frame, in centiseconds
 } FFAndroidAnimation;
 
-FF_REQUIRES_API(31) static bool androidAnimationGetFrame(FFImageAnimation* animation, uint32_t index, FFImageFrame* out, const char** error) {
+FF_ANDROID_REQUIRES_API(31) static bool androidAnimationGetFrame(FFImageAnimation* animation, uint32_t index, FFImageFrame* out, const char** error) {
     FFAndroidAnimation* session = (FFAndroidAnimation*) ffImageAnimationGetImpl(animation);
 
     // Frames come out of the decoder in order, so anything before the current one means starting
@@ -265,13 +267,16 @@ FF_REQUIRES_API(31) static bool androidAnimationGetFrame(FFImageAnimation* anima
     return true;
 }
 
-FF_REQUIRES_API(31) static void androidAnimationDestroy(FFImageAnimation* animation) {
+FF_ANDROID_REQUIRES_API(31) static void androidAnimationDestroy(FFImageAnimation* animation) {
     FFAndroidAnimation* session = (FFAndroidAnimation*) ffImageAnimationGetImpl(animation);
     if (session == nullptr) {
         return;
     }
 
     AImageDecoder_delete(session->decoder);
+    // The decoder reads from the source, so the fd has to outlive every decode, which is why the
+    // session holds it rather than the function that opened it.
+    close(session->fd);
     free(session->canvas);
     free(session->delaysCs);
     free(session);
@@ -281,7 +286,7 @@ bool ffImageAnimationOpenAID(FFLogoRequestData* requestData, FFImageAnimation** 
     // Decoding past the first frame needs API 31: AImageDecoder_advanceFrame and
     // AImageDecoderFrameInfo are both introduced there, and AImageDecoder_decodeImage only
     // documents decoding "all of the frames" from that level on.
-    if (FF_API_AT_LEAST(31)) {
+    if (FF_ANDROID_API_AT_LEAST(31)) {
         FF_AUTO_CLOSE_FD int fd = open(instance.config.logo.source.chars, O_RDONLY | O_CLOEXEC);
         if (fd < 0) {
             return androidImageDecoderError(error, "failed to open the image source");
@@ -388,6 +393,13 @@ bool ffImageAnimationOpenAID(FFLogoRequestData* requestData, FFImageAnimation** 
             AImageDecoder_delete(decoder);
             return androidImageDecoderError(error, "out of memory");
         }
+
+        // Frames are decoded after this function returns, and the decoder reads from the source every
+        // time it does. The fd therefore has to outlive the function: it is handed to the session,
+        // which closes it in androidAnimationDestroy. Clearing the local is what keeps the cleanup
+        // attribute from closing it here -- every path above this line still relies on that attribute.
+        session->fd = fd;
+        fd = -1;
 
         *out = animation;
         return true;

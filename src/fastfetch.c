@@ -2,6 +2,7 @@
 #include "common/ffdata.h"
 #include "detection/version/version.h"
 #include "logo/logo.h"
+#include "common/FFcache.h"
 #include "common/commandoption.h"
 #include "common/genconfig.h"
 #include "common/init.h"
@@ -601,7 +602,7 @@ static void enableJsonOutput(FFdata* data) {
 }
 
 static void genConfigCommon(FFdata* data, const char* value) {
-    if (!getenv("NO_COLOR") && isatty(STDOUT_FILENO) && isatty(STDIN_FILENO)
+    if (!getenv("NO_COLOR") && ffIsTerminal(STDOUT_FILENO) && ffIsTerminal(STDIN_FILENO)
         #ifdef _WIN32
             && ffIsWindows10OrGreater()
         #endif
@@ -690,7 +691,7 @@ static void parseCommand(FFdata* data, char* key, char* value) {
             enableJsonOutput(data);
         }
     } else if (ffStrEqualsIgnCase(key, "--dynamic-interval")) {
-        instance.state.dynamicInterval = ffOptionParseUInt32(key, value); // seconds to milliseconds
+        instance.state.dynamicInterval = ffOptionParseUInt32(key, value); // ms
     } else if (ffStrEqualsIgnCase(key, "-w") || ffStrEqualsIgnCase(key, "--watch")) {
         if (value == nullptr) {
             instance.state.dynamicInterval = 1000; // default to 1 second if no value is provided
@@ -815,6 +816,7 @@ static void run(FFdata* data) {
             ffTimeSleep(instance.state.dynamicInterval);
             fputs("\e[H", stdout); // Move cursor to the top left corner to overwrite the previous output
             instance.state.keysHeight = 0; // Reset keysHeight so `ffLogoPrintRemaining` will recalculate it
+            ffCacheInvalidateAll(); // Drop the detection results cached for the previous round, so that this round re-detects them
         } else {
             break;
         }
@@ -852,9 +854,16 @@ static void writeConfigFile(FFdata* data) {
     } else if (data->genConfigInteractive) {
         if (instance.config.logo.type == FF_LOGO_TYPE_NONE) {
             yyjson_mut_obj_add_null(doc, root, "logo");
-        } else if (instance.config.logo.type == FF_LOGO_TYPE_SMALL) {
+        } else if (instance.config.logo.type == FF_LOGO_TYPE_SMALL && instance.config.logo.position == FF_LOGO_POSITION_LEFT) {
+            yyjson_mut_obj_add_str(doc, root, "logo", "small");
+        } else if (instance.config.logo.position != FF_LOGO_POSITION_LEFT || instance.config.logo.type == FF_LOGO_TYPE_SMALL) {
             yyjson_mut_val* logo = yyjson_mut_obj(doc);
-            yyjson_mut_obj_add_str(doc, logo, "type", "small");
+            if (instance.config.logo.type == FF_LOGO_TYPE_SMALL) {
+                yyjson_mut_obj_add_str(doc, logo, "type", "small");
+            }
+            if (instance.config.logo.position != FF_LOGO_POSITION_LEFT) {
+                yyjson_mut_obj_add_str(doc, logo, "position", ffLogoPositionToString(instance.config.logo.position));
+            }
             yyjson_mut_obj_add_val(doc, root, "logo", logo);
         }
     }

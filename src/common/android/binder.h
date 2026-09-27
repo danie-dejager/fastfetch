@@ -19,8 +19,6 @@
 //   * A handle arriving in a reply is owned by that reply buffer. It has to be acquired
 //     (BC_ACQUIRE + BC_INCREFS) before BC_FREE_BUFFER; otherwise only a weak reference survives and
 //     every later transaction on it fails, because the kernel looks up a strong reference.
-//
-// See .workbuddy-ai/android-binder-raw-client.md for the full write-up and the tooling.
 
 #include "fastfetch.h" // IWYU pragma: keep
 
@@ -50,6 +48,12 @@
 // How many handles a reply may transfer to us. Replies that carry more than this still succeed, but
 // the surplus handles are left unacquired and will fail on first use.
 #define FF_BINDER_MAX_HANDLES 4
+
+// How many file descriptors a reply may hand over. A descriptor is not a handle: the kernel installs
+// it in the caller's own fd table as it delivers the reply, so it is owned rather than borrowed and
+// the caller closes it. A reply carrying more than this still succeeds, and the surplus is closed
+// again by ffBinderTransact() because nothing would be left holding it.
+#define FF_BINDER_MAX_FDS 4
 
 // The three int32 values Parcel::writeInterfaceToken() puts in front of the descriptor, and that
 // Parcel::enforceInterface() checks the last of. These come from libbinder rather than from the
@@ -159,10 +163,12 @@ typedef struct FFBinderReply {
     uint32_t flags;   // TF_* of the reply
     uint32_t handleCount;
     uint32_t handles[FF_BINDER_MAX_HANDLES];
+    uint32_t fdCount;
+    int32_t fds[FF_BINDER_MAX_FDS]; // owned by the caller, which closes them
 } FFBinderReply;
 
 [[nodiscard]] static inline FFBinderReply ffBinderReplyCreate(uint8_t* data, size_t capacity) {
-    return (FFBinderReply) { .data = data, .capacity = capacity, .size = 0, .code = 0, .flags = 0, .handleCount = 0, .handles = {} };
+    return (FFBinderReply) { .data = data, .capacity = capacity, .size = 0, .code = 0, .flags = 0, .handleCount = 0, .handles = {}, .fdCount = 0, .fds = {} };
 }
 
 // A reply carrying TF_STATUS_CODE is not an AIDL parcel at all: the first four bytes are the raw
@@ -196,13 +202,21 @@ typedef struct FFBinderReply {
     return value;
 }
 
-// Synchronous transaction. Returns nullptr on success, a static message otherwise. Handles the
-// reply carries are acquired and added to `reply->handles` before the reply buffer is freed.
+// Synchronous transaction. Returns nullptr on success, a static message otherwise.
+//
+// `flags` carries the TF_* values for the request, and one of them is not cosmetic: a reply that
+// carries a file descriptor is only delivered at all when the request asked with TF_ACCEPT_FDS. A
+// request that did not gets BR_FAILED_REPLY instead, which reads like a service that is not running
+// rather than like a missing flag. TF_ONE_WAY is the other one the kernel acts on, and it is what
+// makes a call fire-and-forget -- there is then no reply to fill `reply` from.
+//
+// Handles the reply carries are acquired and added to `reply->handles` before the reply buffer is
+// freed; descriptors are added to `reply->fds`, which the caller owns and closes.
 //
 // `handle` 0 is the service manager; every other handle comes from ffBinderLookupService(). A
 // service that never replies blocks this call forever -- none of the services fastfetch reads does,
 // but there is no timeout here to fall back on.
-[[gnu::nonnull(1, 4, 5), nodiscard]] const char* ffBinderTransact(FFBinder* binder, uint32_t handle, uint32_t code, const FFBinderParcel* parcel, FFBinderReply* reply);
+[[gnu::nonnull(1, 5, 6), nodiscard]] const char* ffBinderTransact(FFBinder* binder, uint32_t handle, uint32_t code, uint32_t flags, const FFBinderParcel* parcel, FFBinderReply* reply);
 
 // ---------------------------------------------------------------------------------------------
 // Service manager
@@ -222,3 +236,42 @@ typedef struct FFBinderReply {
 
 // Resolves a service name to a handle through the service manager. Returns nullptr on success.
 [[gnu::nonnull(1, 2, 4), nodiscard]] const char* ffBinderLookupService(FFBinder* binder, const char* name, uint32_t transactionCode, uint32_t* handle);
+
+// A handle resolved through the service manager, held together with the binder it came from so that a
+// single cleanup attribute can give it back on every path out of the function that took it. Zeroed --
+// or left at handle 0 by a lookup that has not run or did not succeed -- it is a no-op, which is what
+// makes it safe to declare above the lookup itself.
+typedef struct FFBinderServiceHandle {
+    FFBinder* binder;
+    uint32_t handle;
+} FFBinderServiceHandle;
+
+// Returns the strong and weak references ffBinderLookupService() acquired on the handle. Usable as a
+// cleanup attribute; safe on a zeroed or already released FFBinderServiceHandle.
+[[gnu::nonnull(1)]] void ffBinderServiceHandleRelease(FFBinderServiceHandle* service);
+
+// ---------------------------------------------------------------------------------------------
+// Handles a transaction acquired
+// ---------------------------------------------------------------------------------------------
+
+// Whatever ffBinderTransact() collected for the caller, released together on the way out of a
+// function -- the handles it acquired, plus the descriptors it delivered, which are owned rather
+// than borrowed and would otherwise stay open for the life of the process.
+//
+// Unlike FFBinderServiceHandle this cannot be declared before the transaction runs, because which
+// handles came back is only known afterwards. `replied` is therefore a separate flag the caller
+// raises once ffBinderTransact() has returned: it acquires the handles even when it goes on to fail
+// (a reply that did not fit the caller buffer still had its BC_ACQUIRE tail sent), so releasing
+// without it would drop a reference that was never taken.
+typedef struct FFBinderAcquired {
+    FFBinder* binder;
+    const uint32_t* handles;
+    uint32_t handleCount;
+    const int32_t* fds;
+    uint32_t fdCount;
+    const bool* replied;
+} FFBinderAcquired;
+
+// Usable as a cleanup attribute; safe on a zeroed FFBinderAcquired, and on one whose transaction did
+// not reply.
+[[gnu::nonnull(1)]] void ffBinderAcquiredRelease(FFBinderAcquired* acquired);

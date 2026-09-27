@@ -55,10 +55,37 @@ static uint32_t dexU32(const uint8_t* p) {
     return (uint32_t) p[0] | ((uint32_t) p[1] << 8) | ((uint32_t) p[2] << 16) | ((uint32_t) p[3] << 24);
 }
 
-// LEB128, at most five bytes for the 32-bit values a dex stores this way.
-static uint32_t dexUleb128(const uint8_t** p) {
+// The dex header points at its tables with offsets that a corrupt or hostile file is free to set
+// anywhere, including past the end of the mapping. Testing `end - p` alone does not catch that: once
+// `p` is past `end` the subtraction is negative and casting it to size_t turns it into a huge value,
+// so the comparison passes and the read goes off the end. Both directions have to be one test.
+static bool dexInRange(const uint8_t* dex, const uint8_t* end, const uint8_t* p, size_t size) {
+    return p >= dex && p <= end && (size_t) (end - p) >= size;
+}
+
+// Same, for a table of `count` elements of `elementSize` bytes. `count` is 64-bit because the
+// callers add one to an index that came out of the file, and doing that in 32 bits can wrap to zero
+// and make the check pass for an index that is not in the table. Dividing rather than multiplying is
+// what keeps a hostile `count` from wrapping the size_t on a 32-bit build -- armeabi-v7a is one, and
+// there `count * 4` overflows for any count above 0x3FFFFFFF and the check passes again.
+static bool dexTableInRange(const uint8_t* dex, const uint8_t* end, const uint8_t* p, uint64_t count, size_t elementSize) {
+    if (p < dex || p > end) {
+        return false;
+    }
+    return (size_t) (end - p) / elementSize >= count;
+}
+
+// LEB128, at most five bytes for the 32-bit values a dex stores this way. `end` bounds every read:
+// the lengths and indexes decoded here come out of the file, so a truncated one must not walk off
+// the end. A read that runs into `end` yields what was decoded so far, and the callers treat the
+// resulting value as untrusted -- it is either compared against another count or used as an index
+// that is range checked in turn.
+static uint32_t dexUleb128(const uint8_t** p, const uint8_t* end) {
     uint32_t value = 0;
     for (int shift = 0; shift <= 28; shift += 7) {
+        if (*p >= end) {
+            break;
+        }
         const uint8_t byte = *(*p)++;
         value |= (uint32_t) (byte & 0x7f) << shift;
         if ((byte & 0x80) == 0) {
@@ -68,22 +95,60 @@ static uint32_t dexUleb128(const uint8_t** p) {
     return value;
 }
 
-// encoded_value: one header byte holding ((size - 1) << 5) | type, then that many payload bytes. A
-// `static final int` constant is written as VALUE_INT, whose payload is a sign-extended
-// little-endian integer. Reading through 64 bits keeps every shift in range even if the size field
-// is nonsense; the caller's length check is what rejects such a dex.
-static int32_t dexEncodedInt(const uint8_t** p) {
+// The type tag a dex encoded_value carries in the low five bits of its header byte, per the
+// `encoded_value` table of the dex format (`VALUE_INT = 0x04`, sign-extended four-byte integer).
+// 0x1f is VALUE_BOOLEAN in that same table, which is the trap: naming it VALUE_INT and comparing
+// against it rejects every real int and accepts booleans.
+#define FF_DEX_VALUE_INT 0x04
+
+// encoded_value: one header byte holding ((size - 1) << 5) | type, then that many payload bytes.
+//
+// The `static_values` array is not a list of ints: `IInterface.DESCRIPTOR` is a `static final
+// String` and sits in it, and a real Stub class mixes ints, strings and booleans. So a value whose
+// tag is not VALUE_INT is skipped -- its payload is stepped over to keep the walk aligned with the
+// field list -- and only `isInt` reports whether the *wanted* field ended up being one. Failing on
+// the first non-int instead would abort on `DESCRIPTOR`, before the transaction constants that
+// follow it are ever reached. Measured on a device: `IWifiManager$Stub` carries 347 static fields
+// whose values are mostly VALUE_INT but include that string, and `getConnectionInfo` is 98 there.
+//
+// A payload wider than four bytes is not an int either, and the byte count is what keeps a size
+// field read out of a corrupt file from shifting past the end. Reading through 64 bits keeps every
+// shift in range while counting down; `end` is what keeps a truncated payload from running off the
+// end of the mapping.
+static bool dexEncodedValue(const uint8_t** p, const uint8_t* end, int32_t* result, bool* isInt) {
+    if (*p >= end) {
+        return false;
+    }
     const uint8_t header = *(*p)++;
+    const uint32_t type = (uint32_t) (header & 0x1f);
     const uint32_t size = (uint32_t) (header >> 5) + 1;
+    if (size > 8) {
+        return false;
+    }
+
     uint64_t value = 0;
-    for (uint32_t i = 0; i < size && i < 8; ++i) {
-        value |= (uint64_t) (*(*p)++) << (i * 8);
+    for (uint32_t i = 0; i < size; ++i) {
+        if (*p >= end) {
+            return false;
+        }
+        if (i < sizeof(value)) {
+            value |= (uint64_t) (*(*p)++) << (i * 8);
+        } else {
+            (void) *(*p)++;
+        }
     }
-    const uint32_t bits = size * 8;
-    if (bits < 64 && (value & (1ull << (bits - 1))) != 0) {
-        value |= ~((1ull << bits) - 1);
+
+    *isInt = type == FF_DEX_VALUE_INT && size <= sizeof(uint32_t);
+    if (*isInt) {
+        // VALUE_INT is sign-extended from its own width, not from 32 bits: a one-byte -1 is written
+        // as `21 ff`, one byte of 0xff, and has to come back as -1 rather than 255.
+        const uint32_t bits = size * 8;
+        if ((value & (1ull << (bits - 1))) != 0) {
+            value |= ~((1ull << bits) - 1);
+        }
     }
-    return (int32_t) (uint32_t) value;
+    *result = (int32_t) (uint32_t) value;
+    return true;
 }
 
 // string_data_item: a uleb128 length in UTF-16 code units, then MUTF-8 bytes and a NUL terminator.
@@ -91,14 +156,17 @@ static int32_t dexEncodedInt(const uint8_t** p) {
 // bytes can be used as they are.
 static const char* dexString(const uint8_t* dex, const uint8_t* end, uint32_t index) {
     const uint8_t* ids = dex + dexU32(dex + FF_DEX_OFF_STRING_IDS);
-    if (ids < dex || (size_t) (end - ids) < (size_t) index * 4 + 4) {
+    // `string_ids_size` is not read: the check is that the entry `index` names lies inside the
+    // mapping, which is what the read below needs, and the table is the only thing that can say it
+    // without trusting a second field out of the same file.
+    if (!dexTableInRange(dex, end, ids, (uint64_t) index + 1, 4)) {
         return nullptr;
     }
     const uint8_t* p = dex + dexU32(ids + (size_t) index * 4);
     if (p < dex || p >= end) {
         return nullptr;
     }
-    (void) dexUleb128(&p);
+    (void) dexUleb128(&p, end);
     if (p >= end) {
         return nullptr;
     }
@@ -123,7 +191,7 @@ static const char* dexStaticInt(const uint8_t* dex, size_t size, const char* cla
     // The class's type index, so that the class_def_item and the field ids can be filtered by class.
     const uint8_t* types = dex + dexU32(dex + FF_DEX_OFF_TYPE_IDS);
     const uint32_t typeCount = dexU32(dex + FF_DEX_OFF_TYPE_IDS_SIZE);
-    if (types < dex || (size_t) (end - types) < (size_t) typeCount * 4) {
+    if (!dexTableInRange(dex, end, types, typeCount, 4)) {
         return "The dex type table is out of range";
     }
     uint32_t typeIndex = UINT32_MAX;
@@ -140,7 +208,7 @@ static const char* dexStaticInt(const uint8_t* dex, size_t size, const char* cla
 
     const uint8_t* classes = dex + dexU32(dex + FF_DEX_OFF_CLASS_DEFS);
     const uint32_t classCount = dexU32(dex + FF_DEX_OFF_CLASS_DEFS_SIZE);
-    if (classes < dex || (size_t) (end - classes) < (size_t) classCount * FF_DEX_CLASS_DEF_SIZE) {
+    if (!dexTableInRange(dex, end, classes, classCount, FF_DEX_CLASS_DEF_SIZE)) {
         return "The dex class table is out of range";
     }
 
@@ -152,15 +220,16 @@ static const char* dexStaticInt(const uint8_t* dex, size_t size, const char* cla
 
         const uint8_t* fields = dex + dexU32(classDef + FF_DEX_OFF_CLASS_DEF_DATA);
         const uint8_t* values = dex + dexU32(classDef + FF_DEX_OFF_CLASS_DEF_STATIC_VALUES);
-        if (fields < dex || fields >= end || values < dex || values >= end) {
+        // One byte each, so that the first uleb128 below has something to read.
+        if (!dexInRange(dex, end, fields, 1) || !dexInRange(dex, end, values, 1)) {
             return "The dex class data is out of range";
         }
 
-        const uint32_t staticFields = dexUleb128(&fields);
-        (void) dexUleb128(&fields); // instance_fields_size
-        (void) dexUleb128(&fields); // direct_methods_size
-        (void) dexUleb128(&fields); // virtual_methods_size
-        const uint32_t staticValues = dexUleb128(&values);
+        const uint32_t staticFields = dexUleb128(&fields, end);
+        (void) dexUleb128(&fields, end); // instance_fields_size
+        (void) dexUleb128(&fields, end); // direct_methods_size
+        (void) dexUleb128(&fields, end); // virtual_methods_size
+        const uint32_t staticValues = dexUleb128(&values, end);
         if (staticFields != staticValues) {
             return "The dex static fields and values do not pair up";
         }
@@ -168,18 +237,34 @@ static const char* dexStaticInt(const uint8_t* dex, size_t size, const char* cla
         const uint8_t* fieldIds = dex + dexU32(dex + FF_DEX_OFF_FIELD_IDS);
         uint32_t fieldIndex = 0;
         for (uint32_t j = 0; j < staticFields; ++j) {
-            if (fields >= end) {
+            // The two arrays are walked in step, so running out of either one is a truncation.
+            if (fields >= end || values >= end) {
                 return "The dex static field list is truncated";
             }
-            fieldIndex += dexUleb128(&fields); // field_idx_diff
-            (void) dexUleb128(&fields);        // access_flags
-            const int32_t value = dexEncodedInt(&values);
 
-            if ((size_t) (end - fieldIds) < ((size_t) fieldIndex + 1) * FF_DEX_FIELD_ID_SIZE) {
+            const uint32_t fieldIndexDiff = dexUleb128(&fields, end); // field_idx_diff
+            if (fieldIndexDiff > UINT32_MAX - fieldIndex) {
+                return "The dex field index is out of range";
+            }
+            fieldIndex += fieldIndexDiff;
+            (void) dexUleb128(&fields, end); // access_flags
+            int32_t value;
+            bool isInt;
+            if (!dexEncodedValue(&values, end, &value, &isInt)) {
+                return "The dex static value list is truncated";
+            }
+
+            if (!dexTableInRange(dex, end, fieldIds, (uint64_t) fieldIndex + 1, FF_DEX_FIELD_ID_SIZE)) {
                 return "The dex field table is out of range";
             }
             const char* name = dexString(dex, end, dexU32(fieldIds + (size_t) fieldIndex * FF_DEX_FIELD_ID_SIZE + FF_DEX_OFF_FIELD_ID_NAME));
             if (name != nullptr && strcmp(name, fieldName) == 0) {
+                if (!isInt) {
+                    // The field exists but is not an int, so its value is not the constant asked
+                    // for. Reported here rather than on the first non-int in the list, because the
+                    // list legitimately holds strings (`DESCRIPTOR`) and booleans.
+                    return "The dex static field is not an int";
+                }
                 *result = value;
                 return nullptr;
             }
@@ -335,8 +420,6 @@ const char* ffDexStaticInt(const char* jarPath, const char* classDescriptor, con
         if (data == nullptr) {
             return "No dex in the jar";
         }
-    } else if (method == FF_ZIP_METHOD_STORED) {
-        dataSize = uncompressedSize;
     } else if (method == FF_ZIP_METHOD_DEFLATED) {
         #ifdef FF_HAVE_ZLIB
         const char* error = inflateDex(data, dataSize, uncompressedSize, &mapping.inflated);
@@ -348,9 +431,14 @@ const char* ffDexStaticInt(const char* jarPath, const char* classDescriptor, con
         #else
         return "The jar deflates classes.dex and fastfetch was built without zlib";
         #endif
-    } else {
+    } else if (method != FF_ZIP_METHOD_STORED) {
         return "classes.dex uses an unsupported compression method";
     }
+    // A STORED entry needs no further work: `dataSize` already holds the `compressedSize` that
+    // `findDexEntry` checked against the mapping, and for a STORED entry the payload is the file
+    // itself. The header's `uncompressedSize` is deliberately not used for it -- nothing bounds that
+    // value, so a corrupt one reaches past the end of the mapping, which is exactly what the dex
+    // header would then be validated against.
 
     mapping.data = data;
     mapping.size = dataSize;

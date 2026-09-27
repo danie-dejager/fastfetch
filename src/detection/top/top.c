@@ -4,20 +4,22 @@
 
 static FFlist first;
 static double startTick;
+static FFTopTypes preparedTypes;
 
 void ffPrepareTopProcesses(FFTopTypes showTypes) {
-    if ((showTypes & (FF_TOP_TYPE_CPU | FF_TOP_TYPE_DISK)) == 0) {
-        return; // Memory usage is instantaneous; no baseline snapshot is needed
-    }
-
     if (startTick != 0) {
         return; // Already prepared
     }
 
-    // `showTypes` cannot change between this call and `ffDetectTopProcesses`: `ffPrepareCommandOption`
-    // and `parseStructureCommand` both build the options through `initStructureModuleOptions`, which
-    // merges the module object from the JSON config. So the baseline always matches what the second
-    // snapshot collects and needs no re-validation.
+    if ((showTypes & (FF_TOP_TYPE_CPU | FF_TOP_TYPE_DISK)) == 0) {
+        return; // Memory usage is instantaneous; no baseline snapshot is needed
+    }
+
+    // Within one module `showTypes` cannot change between this call and `ffDetectTopProcesses`:
+    // `ffPrepareCommandOption` and `parseStructureCommand` both build the options through
+    // `initStructureModuleOptions`, which merges the module object from the JSON config, so the
+    // baseline always matches what the second snapshot collects.
+    preparedTypes = showTypes;
     ffListInit(&first);
     startTick = ffTimeGetTick();
     ffTopGetProcessSnapshot(&first, showTypes);
@@ -65,6 +67,13 @@ const char* ffDetectTopProcesses(FFTopOptions* options, FFlist* result) {
     ffListClear(result);
     if (options->nProcesses == 0) {
         return nullptr;
+    }
+
+    // A baseline collected for a different set of counters is answered here rather than in
+    // ffPrepareTopProcesses, which has no way to report an error to the caller. The module that
+    // triggered the mismatch is the one that sees it; see ffPrepareTopProcesses.
+    if (options->showTypes != preparedTypes && (options->showTypes & (FF_TOP_TYPE_CPU | FF_TOP_TYPE_DISK)) != 0) {
+        return "`top` modules with different `showTypes` cannot share a run";
     }
 
     // Memory usage and thread count are instantaneous; when neither CPU time nor disk IO

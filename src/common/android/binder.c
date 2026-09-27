@@ -47,11 +47,12 @@ void ffBinderClose(FFBinder* binder) {
     binder->sharedSize = 0;
 }
 
-const char* ffBinderTransact(FFBinder* binder, uint32_t handle, uint32_t code, const FFBinderParcel* parcel, FFBinderReply* reply) {
+const char* ffBinderTransact(FFBinder* binder, uint32_t handle, uint32_t code, uint32_t flags, const FFBinderParcel* parcel, FFBinderReply* reply) {
     reply->size = 0;
     reply->code = 0;
     reply->flags = 0;
     reply->handleCount = 0;
+    reply->fdCount = 0;
 
     if (parcel->truncated) {
         return "Binder parcel does not fit the caller buffer";
@@ -62,7 +63,7 @@ const char* ffBinderTransact(FFBinder* binder, uint32_t handle, uint32_t code, c
         .target = { .handle = handle },
         .cookie = 0,
         .code = code,
-        .flags = 0, // a synchronous call; TF_ONE_WAY is the only flag the kernel acts on here
+        .flags = flags,
         .sender_pid = 0,
         .sender_euid = 0,
         .data_size = parcel->size,
@@ -146,8 +147,10 @@ const char* ffBinderTransact(FFBinder* binder, uint32_t handle, uint32_t code, c
                     }
                 }
 
-                // Walk the offset table for the flat objects the service sent us and keep the
-                // strong handles: those are the ones a later transaction can address.
+                // Walk the offset table for the flat objects the service sent us. A reply may carry
+                // both kinds at once and they are not interchangeable: a handle is a reference that
+                // has to be acquired (see below) to outlive the reply buffer, while a file
+                // descriptor was installed in our own fd table by the kernel and is simply ours.
                 for (size_t offset = 0; offset + sizeof(binder_size_t) <= offsetsSize; offset += sizeof(binder_size_t)) {
                     binder_size_t objectOffset = 0;
                     memcpy(&objectOffset, offsets + offset, sizeof(objectOffset));
@@ -156,11 +159,17 @@ const char* ffBinderTransact(FFBinder* binder, uint32_t handle, uint32_t code, c
                     }
                     struct flat_binder_object object;
                     memcpy(&object, payload + objectOffset, sizeof(object));
-                    if (object.hdr.type != BINDER_TYPE_HANDLE) {
-                        continue;
-                    }
-                    if (reply->handleCount < FF_BINDER_MAX_HANDLES) {
-                        reply->handles[reply->handleCount++] = object.handle;
+                    if (object.hdr.type == BINDER_TYPE_HANDLE) {
+                        if (reply->handleCount < FF_BINDER_MAX_HANDLES) {
+                            reply->handles[reply->handleCount++] = object.handle;
+                        }
+                    } else if (object.hdr.type == BINDER_TYPE_FD) {
+                        if (reply->fdCount < FF_BINDER_MAX_FDS) {
+                            reply->fds[reply->fdCount++] = (int32_t) object.handle;
+                        } else {
+                            // Nothing is going to hold this one and nothing is going to close it.
+                            close((int) object.handle);
+                        }
                     }
                 }
 
@@ -197,7 +206,13 @@ const char* ffBinderTransact(FFBinder* binder, uint32_t handle, uint32_t code, c
                     .read_consumed = 0,
                     .read_buffer = 0,
                 };
-                ioctl(binder->fd, BINDER_WRITE_READ, &release);
+                // This one ioctl carries the whole tail, so its failure is not cosmetic: without
+                // BC_ACQUIRE the handles handed to the caller are only weakly referenced and every
+                // later transaction on them fails with BR_FAILED_REPLY, which says nothing about the
+                // real cause. Reported, but only when nothing more specific is already at hand.
+                if (ioctl(binder->fd, BINDER_WRITE_READ, &release) != 0 && error == nullptr) {
+                    error = "Releasing the binder reply failed";
+                }
 
                 return error;
             }
@@ -218,7 +233,7 @@ const char* ffBinderLookupService(FFBinder* binder, const char* name, uint32_t t
 
     uint8_t replyBuffer[256];
     FFBinderReply reply = ffBinderReplyCreate(replyBuffer, sizeof(replyBuffer));
-    const char* error = ffBinderTransact(binder, FF_BINDER_SERVICE_MANAGER_HANDLE, transactionCode, &parcel, &reply);
+    const char* error = ffBinderTransact(binder, FF_BINDER_SERVICE_MANAGER_HANDLE, transactionCode, 0, &parcel, &reply);
     if (error != nullptr) {
         return error;
     }
@@ -234,4 +249,61 @@ const char* ffBinderLookupService(FFBinder* binder, const char* name, uint32_t t
 
     *handle = reply.handles[0];
     return nullptr;
+}
+
+void ffBinderServiceHandleRelease(FFBinderServiceHandle* service) {
+    if (service->binder == nullptr || service->handle == 0) {
+        return;
+    }
+
+    // The mirror of the acquire at the end of ffBinderTransact(): one strong and one weak reference
+    // each, dropped in the same order they were taken. The kernel keeps the service node alive until
+    // the last one goes, so this is what stops a short-lived fastfetch from holding one for the whole
+    // of its life.
+    const uint32_t commands[] = { BC_RELEASE, BC_DECREFS };
+    uint8_t tail[2 * 2 * sizeof(uint32_t)];
+    size_t tailSize = 0;
+    for (size_t i = 0; i < 2; i++) {
+        memcpy(tail + tailSize, &commands[i], sizeof(uint32_t));
+        tailSize += sizeof(uint32_t);
+        memcpy(tail + tailSize, &service->handle, sizeof(uint32_t));
+        tailSize += sizeof(uint32_t);
+    }
+
+    struct binder_write_read release = {
+        .write_size = tailSize,
+        .write_consumed = 0,
+        .write_buffer = (binder_uintptr_t) (uintptr_t) tail,
+        .read_size = 0,
+        .read_consumed = 0,
+        .read_buffer = 0,
+    };
+    // Not reported: this runs from a cleanup attribute, where there is no caller left to report to,
+    // and the only way for it to fail is a binder that is already dead -- which every earlier call on
+    // the same binder would have said already.
+    ioctl(service->binder->fd, BINDER_WRITE_READ, &release);
+    service->handle = 0;
+}
+
+void ffBinderAcquiredRelease(FFBinderAcquired* acquired) {
+    if (acquired->replied == nullptr || *acquired->replied == false) {
+        return; // nothing was acquired
+    }
+
+    // A descriptor is not a reference: the kernel installed it in our own fd table when it delivered
+    // the reply, and nobody else holds it, so closing it is the whole of giving it back.
+    for (uint32_t i = 0; i < acquired->fdCount; i++) {
+        close(acquired->fds[i]);
+    }
+
+    // The mirror of the acquire the transaction appended to its tail, in the same order it took them.
+    // No binder to talk through means the handles went with it when it was closed.
+    if (acquired->binder == nullptr || acquired->binder->fd < 0) {
+        return;
+    }
+
+    for (uint32_t i = 0; i < acquired->handleCount; i++) {
+        FFBinderServiceHandle handle = { .binder = acquired->binder, .handle = acquired->handles[i] };
+        ffBinderServiceHandleRelease(&handle);
+    }
 }
