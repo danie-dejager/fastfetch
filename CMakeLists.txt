@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21.0) # C_STANDARD C17 and C23
 
 project(fastfetch
-    VERSION 2.69.0
+    VERSION 2.70.0
     LANGUAGES C
     DESCRIPTION "Fast neofetch-like system information tool"
     HOMEPAGE_URL "https://github.com/fastfetch-cli/fastfetch"
@@ -92,8 +92,6 @@ cmake_dependent_option(ENABLE_EGL "Enable egl" ON "LINUX OR FreeBSD OR OpenBSD O
 cmake_dependent_option(ENABLE_GLX "Enable glx" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR ANDROID OR SunOS OR GNU" OFF)
 cmake_dependent_option(ENABLE_OPENCL "Enable opencl" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR WIN32 OR ANDROID OR SunOS OR Haiku OR GNU" OFF)
 cmake_dependent_option(ENABLE_FREETYPE "Enable freetype" ON "ANDROID" OFF)
-cmake_dependent_option(ENABLE_PULSE "Enable pulse" ON "LINUX OR ANDROID OR GNU" OFF)
-cmake_dependent_option(ENABLE_DDCUTIL "Enable ddcutil" ON "LINUX" OFF)
 cmake_dependent_option(ENABLE_ELF "Enable libelf" ON "LINUX OR ANDROID OR DragonFly OR Haiku OR GNU" OFF)
 cmake_dependent_option(ENABLE_THREADS "Enable multithreading" ON "Threads_FOUND" OFF)
 
@@ -123,7 +121,6 @@ option(ENABLE_EMBEDDED_PCIIDS "Embed pci.ids into fastfetch, requires `python`" 
 option(ENABLE_EMBEDDED_AMDGPUIDS "Embed amdgpu.ids into fastfetch, requires `python`" OFF)
 option(ENABLE_WORDEXP "Enable using of wordexp(3) if available, instead of glob(3)" ON)
 option(ENABLE_LUA "Enable lua scripting for format strings" ON)
-option(ENABLE_QUICKJS "Enable quickjs scripting for format strings" OFF)
 option(ENABLE_LIBZFS "Enable libzfs" ON)
 option(ENABLE_WCWIDTH "Detect wide-width characters with wcwidth when calculating logo and separator width. Disable for a smaller and slightly faster build, but logos containing CJK/emoji may be measured too narrow and render incorrectly. Such usecases are uncommon." ON)
 set(DEFAULT_STRUCTURE "Title:Separator:OS:Host:Kernel:Uptime:Packages:Shell:Display:DE:WM:WMTheme:Theme:Icons:Font:Cursor:Terminal:TerminalFont:CPU:GPU:Memory:Swap:Disk:LocalIp:Battery:PowerAdapter:Locale:Break:Colors" CACHE STRING "Default module structure for detection")
@@ -281,6 +278,22 @@ if(ENABLE_LTO AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
     if(IPO_SUPPORTED)
         set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
     endif()
+endif()
+
+# Release and MinSizeRel drop the symbol table and the unwind metadata; Debug and RelWithDebInfo keep
+# both, so those stay fully debuggable. CMake does not strip MinSizeRel on its own.
+if(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "MinSizeRel")
+    if(NOT APPLE) # ld: warning: -s is obsolete
+        # The symbol table is dead weight: 437 KB (16%) of a MinGW build, 91 KB (3%) of a GCC build.
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-s")
+    endif()
+
+    # Drops .eh_frame / .eh_frame_hdr on ELF (74 KB) and .pdata / .xdata on PE (26 KB). Every C++
+    # translation unit here is built with -fno-exceptions -fno-rtti and no source file contains a
+    # single try / catch, so no exception can ever unwind through these frames. The only loss is
+    # backtrace() / gdb / perf / crash-dump stack walking in a release binary.
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-asynchronous-unwind-tables")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-asynchronous-unwind-tables")
 endif()
 
 #######################
@@ -463,6 +476,7 @@ file(GENERATE OUTPUT logo_builtin.h CONTENT "${LOGO_BUILTIN_H}")
 
 set(LIBFASTFETCH_SRC
     src/common/impl/commandoption.c
+    src/common/impl/debug.c
     src/common/impl/duration.c
     src/common/impl/font.c
     src/common/impl/format.c
@@ -707,6 +721,7 @@ elseif(ANDROID)
         src/detection/packages/packages_nix.c
         src/detection/poweradapter/poweradapter_nosupport.c
         src/detection/processes/processes_linux.c
+        src/detection/sound/sound_android.c
         src/detection/sound/sound_linux.c
         src/detection/swap/swap_linux.c
         src/detection/terminalfont/terminalfont_android.c
@@ -1094,10 +1109,10 @@ elseif(WIN32)
         src/common/impl/processing_windows.c
         src/common/impl/FFPlatform_windows.c
         src/common/impl/binary_windows.c
-        src/common/impl/debug_windows.c
         src/common/impl/kmod_windows.c
         src/common/windows/getline.c
         src/common/windows/com.c
+        src/common/windows/folders.c
         src/common/windows/registry.c
         src/common/windows/unicode.c
         src/common/windows/variant.cpp
@@ -1845,22 +1860,9 @@ ff_lib_enable(FREETYPE
     "freetype2"
     "FreeType2"
 )
-ff_lib_enable(PULSE
-    "libpulse"
-    "Pulse"
-)
-ff_lib_enable(DDCUTIL
-    "ddcutil"
-    "Ddcutil"
-)
 ff_lib_enable(ELF
     "libelf"
     "libelf"
-)
-ff_lib_enable(QUICKJS
-    "qjs"
-    "qjs"
-    "qjs"
 )
 if(ENABLE_LUA)
     # Lua is a special case since its CMake config does not follow the usual pattern
@@ -1954,10 +1956,10 @@ elseif(APPLE)
         PRIVATE "-framework SystemConfiguration"
         PRIVATE "-framework VideoToolbox"
 
-        PRIVATE "-weak_framework CoreDisplay"
         PRIVATE "-F /System/Library/PrivateFrameworks"
         PRIVATE "-weak_framework DisplayServices"
         PRIVATE "-weak_framework MediaRemote"
+        PRIVATE "-weak_framework SkyLight"
     )
 elseif(WIN32)
     target_link_libraries(libfastfetch
@@ -2275,15 +2277,6 @@ if (BUILD_TESTS)
         PRIVATE libfastfetch
     )
 
-    if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
-        add_executable(fastfetch-test-cpu
-            tests/cpu.c
-        )
-        target_link_libraries(fastfetch-test-cpu
-            PRIVATE libfastfetch
-        )
-    endif()
-
     add_executable(fastfetch-test-strbuf
         tests/strbuf.c
     )
@@ -2397,9 +2390,6 @@ if (BUILD_TESTS)
     )
 
     enable_testing()
-    if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
-        add_test(NAME test-cpu COMMAND fastfetch-test-cpu)
-    endif()
     add_test(NAME test-cache COMMAND fastfetch-test-cache)
     add_test(NAME test-logo COMMAND fastfetch-test-logo)
     add_test(NAME test-strbuf COMMAND fastfetch-test-strbuf)

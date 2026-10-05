@@ -96,7 +96,7 @@ cmake -DBUILD_TESTS=On -DENABLE_VULKAN=OFF -DENABLE_WAYLAND=OFF -DENABLE_X11=OFF
 
 Required: CMake ≥ 3.21 and a C23 compiler (GCC, Clang or MSVC). Everything else is optional.
 
-Optional dependencies are auto-detected: libpci, libdrm, vulkan, wayland, xcb, xrandr, dbus, sqlite3, rpm, imagemagick{6,7}, chafa, zlib, egl, glx, opencl, freetype, pulse, ddcutil, elf, libzfs, and more.
+Optional dependencies are auto-detected: libpci, libdrm, vulkan, wayland, xcb, xrandr, dbus, sqlite3, rpm, imagemagick{6,7}, chafa, zlib, egl, glx, opencl, freetype, elf, libzfs, and more.
 
 ---
 
@@ -587,10 +587,6 @@ clang-format -i src/modules/foo/*.c src/modules/foo/*.h
 | Module options | `FF<Name>Options` | `FFCPUOptions` |
 | Detection results | `FF<Name>Result` | `FFCPUResult` |
 
-### Spelling
-
-CI runs codespell (`.codespellrc`). Known false positives are listed in `ignore-words-list` (`iterm`, `compiletime`, and various non-English distro words). Add new words there rather than changing the code.
-
 ### Compiler warnings
 
 The build enables `-Wall -Wextra -Wconversion` plus several `-Werror`s:
@@ -707,7 +703,6 @@ Coverage focuses on the core data structures and the formatting engine in `commo
 
 ```sh
 clang-format -i <changed files>                  # format
-codespell                                        # spelling
 cmake -B build -DBUILD_TESTS=On && cmake --build build -j
 cd build && ctest --output-on-failure            # tests
 ./build/fastfetch --format json                  # verify JSON output is well-formed

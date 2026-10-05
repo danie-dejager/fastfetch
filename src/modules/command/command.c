@@ -103,6 +103,7 @@ void ffParseCommandJsonObject(FFCommandOptions* options, yyjson_val* module) {
     }
 }
 
+[[gnu::cold]]
 void ffGenerateCommandJsonConfig(FFCommandOptions* options, yyjson_mut_doc* doc, yyjson_mut_val* module) {
     ffJsonConfigGenerateModuleArgsConfig(doc, module, &options->moduleArgs);
 
@@ -188,6 +189,7 @@ FFModuleBaseInfo ffCommandModuleInfo = {
         .cs = "Příkaz",
         .de = "Befehl",
         .es = "Comando",
+        .fi = "Komento",
         .fr = "Commande",
         .gl = "Comando",
         .he = "פקודה",

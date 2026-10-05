@@ -1125,6 +1125,11 @@
                                 },
                                 {
                                     "type": "string",
+                                    "const": "fi",
+                                    "description": "Finnish"
+                                },
+                                {
+                                    "type": "string",
                                     "const": "fr",
                                     "description": "French"
                                 },
@@ -1914,7 +1919,7 @@
                                         "$ref": "#/$defs/percent"
                                     },
                                     "ddcciSleep": {
-                                        "description": "Sleep time in milliseconds between DDC/CI requests\nSet to null to skip DDC/CI detection\nSee <https://www.ddcutil.com/performance_options/#option-sleep-multiplier> for details",
+                                        "description": "Sleep time in milliseconds between DDC/CI requests\nSet to null to skip DDC/CI detection",
                                         "oneOf": [
                                             {
                                                 "type": "null",
@@ -4073,7 +4078,7 @@
                                         "const": "publicip"
                                     },
                                     "url": {
-                                        "description": "URL of the public IP detection server to use. Only HTTP is supported\nIf empty, `http://ipinfo.io/json` is requested (`http://v6.ipinfo.io/json` when `ipv6` is set), with HTTP compression and TCP Fast Open enabled. A non-empty URL disables both and makes `ipv6` have no effect",
+                                        "description": "URL of the public IP detection server to use. Only HTTP is supported\nIf empty, `http://ipinfo.io/json` is requested (`http://v6.ipinfo.io/json` when `ipv6` is set), with TCP Fast Open enabled. A non-empty URL disables both and makes `ipv6` have no effect",
                                         "type": "string",
                                         "format": "url"
                                     },
