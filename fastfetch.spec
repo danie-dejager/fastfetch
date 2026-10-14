@@ -27,6 +27,7 @@ BuildRequires:  clang20-devel
 %if 0%{?amzn} == 2023
 BuildRequires:  clang22
 BuildRequires:  clang22-devel
+BuildRequires:  libdrm-devel
 %global clang_ver 22
 %endif
 
