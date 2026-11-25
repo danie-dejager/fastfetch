@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21.0) # C_STANDARD C17 and C23
 
 project(fastfetch
-    VERSION 2.70.0
+    VERSION 2.72.0
     LANGUAGES C
     DESCRIPTION "Fast neofetch-like system information tool"
     HOMEPAGE_URL "https://github.com/fastfetch-cli/fastfetch"
@@ -564,6 +564,8 @@ set(LIBFASTFETCH_SRC
     src/detection/zpool/zpool.c
     src/logo/builtin.c
     src/logo/logo.c
+    src/logo/spin/render.c
+    src/logo/spin/spin.c
     src/modules/modules.c
     src/options/display.c
     src/options/logo.c
@@ -618,11 +620,13 @@ if(LINUX)
         src/detection/dns/dns_linux.c
         src/detection/physicaldisk/physicaldisk_linux.c
         src/detection/physicalmemory/physicalmemory_linux.c
+        src/detection/physicalmemory/physicalmemory_shared.c
         src/detection/diskio/diskio_linux.c
         src/detection/displayserver/linux/displayserver_linux.c
         src/detection/displayserver/linux/common.c
         src/detection/displayserver/linux/drm.c
         src/detection/displayserver/linux/wayland/wayland.c
+        src/detection/displayserver/linux/wayland/mutter.c
         src/detection/displayserver/linux/wayland/global-output.c
         src/detection/displayserver/linux/wayland/wl-output-protocol.c
         src/detection/displayserver/linux/wayland/wp-color-management-v1-protocol.c
@@ -712,6 +716,7 @@ elseif(ANDROID)
         src/detection/diskio/diskio_linux.c
         src/detection/displayserver/displayserver_android.c
         src/detection/displayserver/linux/wayland/wayland.c
+        src/detection/displayserver/linux/wayland/mutter.c
         src/detection/displayserver/linux/wayland/global-output.c
         src/detection/displayserver/linux/wayland/kde-output.c
         src/detection/displayserver/linux/wayland/wl-output-protocol.c
@@ -794,12 +799,13 @@ elseif(FreeBSD)
         src/detection/disk/disk_bsd.c
         src/detection/dns/dns_linux.c
         src/detection/physicaldisk/physicaldisk_bsd.c
-        src/detection/physicalmemory/physicalmemory_linux.c
+        src/detection/physicalmemory/physicalmemory_shared.c
         src/detection/diskio/diskio_bsd.c
         src/detection/displayserver/linux/displayserver_linux.c
         src/detection/displayserver/linux/common.c
         src/detection/displayserver/linux/drm.c
         src/detection/displayserver/linux/wayland/wayland.c
+        src/detection/displayserver/linux/wayland/mutter.c
         src/detection/displayserver/linux/wayland/global-output.c
         src/detection/displayserver/linux/wayland/kde-output.c
         src/detection/displayserver/linux/wayland/wl-output-protocol.c
@@ -892,12 +898,13 @@ elseif(NetBSD)
         src/detection/disk/disk_bsd.c
         src/detection/dns/dns_linux.c
         src/detection/physicaldisk/physicaldisk_nbsd.c
-        src/detection/physicalmemory/physicalmemory_linux.c
+        src/detection/physicalmemory/physicalmemory_shared.c
         src/detection/diskio/diskio_nbsd.c
         src/detection/displayserver/linux/displayserver_linux.c
         src/detection/displayserver/linux/common.c
         src/detection/displayserver/linux/drm.c
         src/detection/displayserver/linux/wayland/wayland.c
+        src/detection/displayserver/linux/wayland/mutter.c
         src/detection/displayserver/linux/wayland/global-output.c
         src/detection/displayserver/linux/wayland/kde-output.c
         src/detection/displayserver/linux/wayland/wl-output-protocol.c
@@ -977,12 +984,13 @@ elseif(OpenBSD)
         src/detection/disk/disk_bsd.c
         src/detection/dns/dns_linux.c
         src/detection/physicaldisk/physicaldisk_obsd.c
-        src/detection/physicalmemory/physicalmemory_linux.c
+        src/detection/physicalmemory/physicalmemory_shared.c
         src/detection/diskio/diskio_obsd.c
         src/detection/displayserver/linux/displayserver_linux.c
         src/detection/displayserver/linux/common.c
         src/detection/displayserver/linux/drm.c
         src/detection/displayserver/linux/wayland/wayland.c
+        src/detection/displayserver/linux/wayland/mutter.c
         src/detection/displayserver/linux/wayland/global-output.c
         src/detection/displayserver/linux/wayland/kde-output.c
         src/detection/displayserver/linux/wayland/wl-output-protocol.c
@@ -1117,7 +1125,7 @@ elseif(APPLE)
             src/detection/board/board_windows.c
             src/detection/chassis/chassis_windows.c
             src/detection/host/host_windows.c
-            src/detection/physicalmemory/physicalmemory_linux.c
+            src/detection/physicalmemory/physicalmemory_shared.c
         )
     else()
         list(APPEND LIBFASTFETCH_SRC
@@ -1140,6 +1148,7 @@ elseif(WIN32)
         src/common/windows/getline.c
         src/common/windows/com.c
         src/common/windows/folders.c
+        src/common/windows/glob.c
         src/common/windows/registry.c
         src/common/windows/unicode.c
         src/common/windows/variant.cpp
@@ -1181,7 +1190,7 @@ elseif(WIN32)
         src/detection/media/media_windows.cpp
         src/detection/memory/memory_windows.c
         src/detection/mouse/mouse_windows.c
-        src/detection/physicalmemory/physicalmemory_linux.c
+        src/detection/physicalmemory/physicalmemory_shared.c
         src/detection/netio/netio_windows.c
         src/detection/opengl/opengl_windows.c
         src/detection/os/os_windows.c
@@ -1237,12 +1246,13 @@ elseif(SunOS)
         src/detection/disk/disk_sunos.c
         src/detection/dns/dns_linux.c
         src/detection/physicaldisk/physicaldisk_sunos.c
-        src/detection/physicalmemory/physicalmemory_linux.c
+        src/detection/physicalmemory/physicalmemory_shared.c
         src/detection/diskio/diskio_sunos.c
         src/detection/displayserver/linux/displayserver_linux.c
         src/detection/displayserver/linux/common.c
         src/detection/displayserver/linux/drm.c
         src/detection/displayserver/linux/wayland/wayland.c
+        src/detection/displayserver/linux/wayland/mutter.c
         src/detection/displayserver/linux/wayland/global-output.c
         src/detection/displayserver/linux/wayland/kde-output.c
         src/detection/displayserver/linux/wayland/wl-output-protocol.c
@@ -1321,7 +1331,7 @@ elseif(Haiku)
         src/detection/disk/disk_haiku.cpp
         src/detection/dns/dns_linux.c
         src/detection/physicaldisk/physicaldisk_haiku.c
-        src/detection/physicalmemory/physicalmemory_linux.c
+        src/detection/physicalmemory/physicalmemory_shared.c
         src/detection/diskio/diskio_nosupport.c
         src/detection/displayserver/displayserver_haiku.cpp
         src/detection/font/font_haiku.cpp
@@ -1402,6 +1412,7 @@ elseif(GNU)
         src/detection/diskio/diskio_nosupport.c
         src/detection/displayserver/linux/displayserver_linux.c
         src/detection/displayserver/linux/wayland/wayland.c
+        src/detection/displayserver/linux/wayland/mutter.c
         src/detection/displayserver/linux/common.c
         src/detection/displayserver/linux/drm.c
         src/detection/displayserver/linux/wmde.c
@@ -1601,14 +1612,14 @@ if(APPLE AND EXISTS "/usr/bin/otool")
         target_compile_definitions(libfastfetch PUBLIC FF_LIBSYSTEM_VERSION="${CMAKE_MATCH_1}")
     endif()
 endif()
-if(MidnightBSD AND EXISTS "/usr/bin/objdump")
+if(FreeBSD AND NOT DragonFly AND EXISTS "/usr/bin/objdump")
     execute_process(COMMAND /bin/sh -c "/usr/bin/objdump -T /lib/libc.so.* | grep 'FBSD_[0-9][0-9]*\\.[0-9][0-9]*' -o | sort -Vru | head -1"
                     OUTPUT_VARIABLE OBJDUMP_T_RESULT)
     if("${OBJDUMP_T_RESULT}" MATCHES "FBSD_([0-9]+\\.[0-9]+)")
         message(STATUS "Found FBSD ${CMAKE_MATCH_1}")
         target_compile_definitions(libfastfetch PUBLIC FF_FBSD_VERSION="${CMAKE_MATCH_1}")
     endif()
-elseif(FreeBSD AND EXISTS "/usr/local/bin/objdump")
+elseif(FreeBSD AND NOT DragonFly AND EXISTS "/usr/local/bin/objdump")
     execute_process(COMMAND /bin/sh -c "/usr/local/bin/objdump -T /lib/libc.so.* | grep 'FBSD_[0-9][0-9]*\\.[0-9][0-9]*' -o | sort -Vru | head -1"
                     OUTPUT_VARIABLE OBJDUMP_T_RESULT)
     if("${OBJDUMP_T_RESULT}" MATCHES "FBSD_([0-9]+\\.[0-9]+)")
@@ -2284,8 +2295,12 @@ if(WIN32)
         "${CMAKE_CURRENT_SOURCE_DIR}/src/common/windows/manifest.xml"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/common/windows/logo.ico"
     )
+    set_property(SOURCE src/3rdparty/pawnio/pawnio.rc APPEND PROPERTY OBJECT_DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/3rdparty/pawnio/IntelMSR.bin"
+    )
     target_sources(fastfetch
         PRIVATE src/common/windows/version.rc
+        PRIVATE src/3rdparty/pawnio/pawnio.rc
     )
 elseif(APPLE)
     target_link_options(fastfetch
@@ -2323,6 +2338,7 @@ if (BUILD_FLASHFETCH)
     if(WIN32)
         target_sources(flashfetch
             PRIVATE src/common/windows/version.rc
+            PRIVATE src/3rdparty/pawnio/pawnio.rc
         )
     elseif(APPLE)
         # flashfetch embeds its own plist so that its CFBundleIdentifier matches the
@@ -2358,6 +2374,22 @@ if (BUILD_TESTS)
         tests/logo.c
     )
     target_link_libraries(fastfetch-test-logo
+        PRIVATE libfastfetch
+    )
+
+    if (WIN32)
+        add_executable(fastfetch-test-glob
+            tests/glob.c
+        )
+        target_link_libraries(fastfetch-test-glob
+            PRIVATE libfastfetch
+        )
+    endif()
+
+    add_executable(fastfetch-test-spin
+        tests/spin.c
+    )
+    target_link_libraries(fastfetch-test-spin
         PRIVATE libfastfetch
     )
 
@@ -2480,9 +2512,20 @@ if (BUILD_TESTS)
         PRIVATE libfastfetch
     )
 
+    add_executable(fastfetch-test-edid
+        tests/edid.c
+    )
+    target_link_libraries(fastfetch-test-edid
+        PRIVATE libfastfetch
+    )
+
     enable_testing()
     add_test(NAME test-cache COMMAND fastfetch-test-cache)
     add_test(NAME test-logo COMMAND fastfetch-test-logo)
+    if (WIN32)
+        add_test(NAME test-glob COMMAND fastfetch-test-glob)
+    endif()
+    add_test(NAME test-spin COMMAND fastfetch-test-spin)
     add_test(NAME test-strbuf COMMAND fastfetch-test-strbuf)
     add_test(NAME test-list COMMAND fastfetch-test-list)
     add_test(NAME test-format COMMAND fastfetch-test-format)
@@ -2500,6 +2543,9 @@ if (BUILD_TESTS)
     add_test(NAME test-endian COMMAND fastfetch-test-endian)
     add_test(NAME test-endian-bigendian COMMAND fastfetch-test-endian-bigendian)
     add_test(NAME test-gpu-pci COMMAND fastfetch-test-gpu-pci)
+    add_test(NAME test-edid COMMAND fastfetch-test-edid)
+    # A regression in the EDID parser can turn the scan into an infinite loop.
+    set_tests_properties(test-edid PROPERTIES TIMEOUT 30)
 endif()
 
 ##################

@@ -1,3 +1,70 @@
+# 2.72.0
+
+Changes:
+* DragonFly BSD support is deprecated and will be removed in a future release.
+    * DF BSD keeps introducing broken packages and breaks fastfetch CI, making it difficult to maintain reliable support. Considering its low usage and the maintenance burden, I have decided to deprecate it.
+
+Features:
+* Added glob and environment variable expansion to logo sources on Windows. `%VAR%`, `$VAR` and `${VAR}` are supported, and a glob matching several files picks one randomly. (#2718, Logo, Windows)
+* Added opt-in drive health detection for NVMe disks, via udisks2 on Linux (no root required), NVMe SMART on macOS and the NVMe health log on Windows. (#2726, PhysicalDisk, Linux / macOS / Windows)
+    * Enable it with `"health": true`. The default output appends `Health <100 - percentage used>%` and any critical warnings.
+    * New format args: `{health}`, `{percent-used}`, `{available-spare}` and `{critical-warning}`.
+    * ATA disks report the SMART `failing` status as a critical warning (SAS and RAID disks stay unknown). On Windows and macOS, checking them may wake a sleeping HDD.
+* Added unprivileged detection of DMI physical memory slots on Linux using udev's DMI database (`/run/udev/data/+dmi:id`, systemd 248+). (PhysicalMemory, Linux)
+    * Falls back to reading SMBIOS directly when the udev DMI database is unavailable (requires root).
+* Added version detection and a `PowerShell Preview` display name for `pwsh-preview`. (Shell, Windows)
+* Added CPU temperature detection via PawnIO on Windows. (CPU, Windows)
+    * Previously CPU temperature was read from the `\_TZ.CPUZ` thermal zone via perflib, which can be unavailable or inaccurate on some systems. The new method reads Intel MSRs directly through the PawnIO driver.
+    * Requires an x86_64 Intel CPU, the PawnIO driver installed, and administrator privileges; otherwise fastfetch falls back to the thermal zone method. Maximum frequency detection is also improved when PawnIO is available.
+    * Disclaimer: installing an 3rd-party kernel driver is generally not recommended and may pose security risks. Use it at your own risk.
+
+Changes:
+* Improved PCI GPU name resolution by checking udev's hardware database and the NVIDIA driver's procfs before falling back to pci.ids. (GPU, Linux)
+* Redhat Virtio GPUs are now reported as integrated instead of discrete. (GPU, Linux)
+
+Bugfixes:
+* Fixed libc version detection on FreeBSD without binutils installed, and on DragonFly BSD. (Libc, FreeBSD / DragonFly)
+* Fixed CPU cache detection failing entirely when any CPU is offline. (#2736, CPUCache, Linux)
+* Fixed the scale factor of rotated monitors on Wayland, e.g. a 1920x1200 monitor rotated by 90 degrees at scale 1 being reported as `@ 1.59x`. (Display, Linux)
+* Fixed Linux DRM display detection reading connector information from the wrong sysfs path after the EDID path was appended, and appending the EDID display name to the connector name instead of replacing it. (Display, Linux)
+* Fixed the sysfs modes buffer not being NUL-terminated before parsing on Linux. (Display, Linux)
+* Fixed out-of-bounds reads when parsing malformed CTA-861 EDID extensions. (General)
+* Fixed the init system executable path being truncated on platforms where POSIX `basename()` modifies its argument. (InitSystem, Linux)
+* Fixed undefined behavior from passing negative `char` values to ctype functions. (General)
+
+Logos:
+* Updated the CuerdOS logo and colors (#2712)
+* Removed the Turkmen Linux (`Turkish`) logo
+
+# 2.71.0
+
+Features:
+* Added a `spin` logo type (`--logo-type spin`), which animates the built-in logo or a text file as a 3D slab that rotates. (Logo)
+    * This logo type requires `--watch <s>`/`--dynamic-interval <ms>` being set to enable animation. For example: `fastfetch --logo-type spin --watch 1` will animate the logo every second.
+    * `--logo-spin-speed-per-frame` sets the degrees per drawn frame (default 10); `--logo-spin-speed-per-round` sets the seconds one revolution takes and wins when both are given. Both accept a negative value to turn the other way.
+    * `--logo-spin-angle` picks the frame to start from, and is the only frame drawn without `--watch`.
+* Optimised display detection on GNOME and Cinnamon Wayland sessions. (Display, Linux)
+
+Bugfixes:
+* Don't detect mise and atuin as shells. (#2686, Shell)
+* Rejected an empty `separator.string` in the JSON config with an error message. (#2689, Separator)
+* Fixed fastfetch blocking forever when the terminal answered a terminal query only partially, for example with just one of the two OSC 10/11 color replies. (Logo / Terminal / TerminalTheme, Unix / Windows)
+* Fixed a `$` ending a logo line or the logo itself being parsed as the start of a color code instead of a plain dollar sign. (#2666, Logo)
+* Fixed AMD GPU name detection in amdgpu.ids when PCI device ID or revision ID has leading zeros. (GPU, Linux)
+* Improved uptime detection on SunOS via kstat. (#2674, Uptime, SunOS)
+* Fixed substring formatting returning the remaining string when a negative end index is before the start of the string. (General)
+* Fixed a skipped `{?}` / `{/}` conditional in a format string ending at the `{?}` / `{/}` of a conditional nested in it. (General)
+* Fixed numbers in format strings that don't fit in 32 bits wrapping around to a valid argument index, constant index, substring index or length, e.g. `{4294967297}` being read as `{1}`, and a signed integer overflow for `{1:-2147483648}`. (General)
+* Fixed substring formatting printing the placeholder as is, instead of nothing, when the start index is outside of the string and an end index is given. (General)
+* Fixed the CPU micro-architecture level (`march`) being under-reported on Windows on ARM when `IsProcessorFeaturePresent` does not expose a feature the CPU implements. (CPU, Windows)
+    * It is now decoded from the AArch64 ID registers in the registry, matching the Linux detection.
+
+Logos:
+* Added Tiny Core Linux (#2655)
+* Added ArmadaOS (#2649)
+* Added AstrOS (#2582)
+* Added openSUSE Leap Micro (#2703)
+
 # 2.70.0
 
 Changes:
@@ -42,6 +109,7 @@ Bugfixes:
     * On Windows 10 1809 (build 17763) and later, the whole volume's capacity and free space are now reported by default. Set `disk.useAvailable` to `true` to keep reporting the space that is available to the current user, quota included.
 
 Logos:
+* Added ArmadaOS logo (#2641)
 * Added filled Artix logo (#2631)
 * Renamed PostmarketOS to nura (#2626)
 
